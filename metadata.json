@@ -1,0 +1,5 @@
+{
+  "name": "ToonHunter",
+  "description": "Une application de chasse aux trésors en réalité augmentée. Scannez des lieux réels pour collectionner des personnages 3D magiques intégrés à vos photos.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}
