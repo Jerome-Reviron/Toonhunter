@@ -16,12 +16,59 @@ ToonHunter est une application web innovante de chasse aux trésors utilisant l'
 - **IA** : Google Gemini API (`gemini-2.5-flash-image` & `gemini-3-flash-preview`).
 - **Backend (Optionnel)** : Compatible avec une API PHP/MySQL (Laragon).
 
-## 🌿 Stratégie de Branches
+## 🌿 Gestion du projet (Git Flow)
 
-Ce projet utilise une structure de branches simple et efficace :
+Le projet utilise deux branches principales :
 
-- **`main`** : Version stable et déployable de l'application.
-- **`develop`** : Branche principale de développement. Toutes les nouvelles fonctionnalités sont testées ici.
+- **`develop`** : C'est ici que vous travaillez au quotidien.
+- **`main`** : C'est la version stable "officielle".
+
+---
+
+### 🛠️ Workflow Complet : Du développement à la mise en ligne
+
+Suivez ces commandes dans l'ordre pour un projet propre :
+
+#### 1. Travail quotidien (sur la branche `develop`)
+
+Une fois vos modifications terminées et testées localement :
+
+```bash
+# Vérifier que vous êtes bien sur develop
+git branch
+
+# Ajouter vos modifications
+git add .
+
+# Créer le point de sauvegarde (commit)
+git commit -m "Description de vos changements"
+
+# Envoyer sur GitHub (branche develop)
+git push origin develop
+```
+
+#### 2. Fusion vers la version stable (sur la branche `main`)
+
+Quand vous êtes satisfait de votre version sur `develop` et que vous voulez mettre à jour `main` :
+
+```bash
+# 1. Basculer sur la branche principale
+git checkout main
+
+# 2. Récupérer les éventuelles modifs du serveur (sécurité)
+git pull origin main
+
+# 3. Fusionner le travail de develop dans main
+git merge develop
+
+# 4. Envoyer la version stable sur GitHub
+git push origin main
+
+# 5. Revenir sur develop pour continuer à coder
+git checkout develop
+```
+
+---
 
 ## 🚀 Installation Locale
 
