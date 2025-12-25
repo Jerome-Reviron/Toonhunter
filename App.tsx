@@ -25,6 +25,9 @@ import {
   Sparkles,
   AlertTriangle,
   RefreshCcw,
+  Navigation2,
+  Radar,
+  CircleDot,
 } from "lucide-react";
 
 const App: React.FC = () => {
@@ -79,14 +82,20 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (user && "geolocation" in navigator) {
+      // Configuration GPS ultra-précise : pas de cache, timeout court
       const watchId = navigator.geolocation.watchPosition(
-        (pos) =>
+        (pos) => {
           setUserLocation({
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
-          }),
-        null,
-        { enableHighAccuracy: true }
+          });
+        },
+        (err) => console.error("GPS Error:", err),
+        {
+          enableHighAccuracy: true,
+          timeout: 2000,
+          maximumAge: 0,
+        }
       );
       return () => navigator.geolocation.clearWatch(watchId);
     }
@@ -298,29 +307,37 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0518] text-white">
-      <header className="sticky top-0 z-20 bg-[#0f0518]/90 backdrop-blur-lg border-b border-white/10 p-4">
+    <div className="min-h-screen bg-[#0f0518] text-white overflow-x-hidden font-nunito">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-20 -left-20 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-20 -right-20 w-96 h-96 bg-pink-600/10 rounded-full blur-[120px]"></div>
+      </div>
+
+      <header className="sticky top-0 z-30 bg-[#0f0518]/80 backdrop-blur-xl border-b border-white/10 p-4">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
-          <h1 className="text-xl font-display font-black tracking-tight">
-            <span className="text-pink-500">TOON</span>HUNTER
+          <h1 className="text-2xl font-display font-black tracking-tight text-white">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">
+              TOON
+            </span>
+            HUNTER
           </h1>
           <div className="flex gap-2">
             <button
               onClick={() => setCurrentTab("map")}
-              className={`p-2 rounded-xl transition-all ${
+              className={`p-2.5 rounded-xl transition-all ${
                 currentTab === "map"
-                  ? "bg-white/10 text-pink-400"
-                  : "text-gray-500"
+                  ? "bg-white/10 text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.3)]"
+                  : "text-gray-500 hover:text-gray-300"
               }`}
             >
               <Map className="w-5 h-5" />
             </button>
             <button
               onClick={() => setCurrentTab("collection")}
-              className={`p-2 rounded-xl transition-all ${
+              className={`p-2.5 rounded-xl transition-all ${
                 currentTab === "collection"
-                  ? "bg-white/10 text-emerald-400"
-                  : "text-gray-500"
+                  ? "bg-white/10 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                  : "text-gray-500 hover:text-gray-300"
               }`}
             >
               <Trophy className="w-5 h-5" />
@@ -328,10 +345,10 @@ const App: React.FC = () => {
             {user?.role === "admin" && (
               <button
                 onClick={() => setCurrentTab("admin")}
-                className={`p-2 rounded-xl ${
+                className={`p-2.5 rounded-xl transition-all ${
                   currentTab === "admin"
-                    ? "bg-white/10 text-red-400"
-                    : "text-gray-500"
+                    ? "bg-white/10 text-red-400 shadow-[0_0_15px_rgba(248,113,113,0.3)]"
+                    : "text-gray-500 hover:text-gray-300"
                 }`}
               >
                 <Lock className="w-5 h-5" />
@@ -339,7 +356,7 @@ const App: React.FC = () => {
             )}
             <button
               onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-white transition-colors"
+              className="p-2.5 text-gray-500 hover:text-white transition-colors"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -347,12 +364,61 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-6 pb-24">
+      <main className="max-w-2xl mx-auto p-6 pb-24 relative z-10">
         {currentTab === "map" && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-display font-black">
-              Points de Capture
-            </h2>
+          <div className="space-y-8">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-3xl font-display font-black text-white">
+                Exploration
+              </h2>
+              <p className="text-gray-400 text-sm">
+                Découvrez les Toons cachés autour de vous.
+              </p>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 flex flex-wrap gap-4 items-center justify-between backdrop-blur-md shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
+                  <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400">
+                    <Navigation2 className="w-5 h-5" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">
+                    Signal GPS
+                  </p>
+                  <p className="text-sm font-bold text-white">
+                    Position Active
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-6 items-center">
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
+                    Rayon Scan
+                  </p>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <CircleDot className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-sm font-bold text-white">50m</span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
+                    Toons proches
+                  </p>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <Radar className="w-3.5 h-3.5 text-pink-500" />
+                    <span className="text-sm font-bold text-white">
+                      {locations.length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {locations.map((loc) => (
                 <LocationCard
@@ -380,8 +446,8 @@ const App: React.FC = () => {
 
         {currentTab === "collection" && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-display font-black">
-              Album des Trophées
+            <h2 className="text-3xl font-display font-black text-white">
+              Trophées
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {locations.map((loc) => {
@@ -397,10 +463,10 @@ const App: React.FC = () => {
                 return (
                   <div
                     key={loc.id}
-                    className={`relative overflow-hidden rounded-2xl border-2 transition-all ${
+                    className={`relative overflow-hidden rounded-3xl border-2 transition-all duration-300 ${
                       isFound
-                        ? "border-emerald-500 bg-gray-900 shadow-xl"
-                        : "border-white/5 bg-white/5 grayscale opacity-40"
+                        ? "border-emerald-500/50 bg-gray-900 shadow-xl"
+                        : "border-white/5 bg-white/5 grayscale opacity-40 hover:opacity-50"
                     }`}
                   >
                     <div className="h-48 w-full relative">
@@ -419,7 +485,7 @@ const App: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    <div className="p-4">
+                    <div className="p-5">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-lg font-black font-display text-white">
                           {loc.characterName}
@@ -444,15 +510,15 @@ const App: React.FC = () => {
                                   target: loc,
                                 })
                               }
-                              className="flex-1 py-2 bg-white/10 text-white text-[10px] font-black uppercase rounded-lg border border-white/10"
+                              className="flex-1 py-2 bg-white/10 text-white text-[10px] font-black uppercase rounded-xl border border-white/10 hover:bg-white/20 transition-colors"
                             >
-                              Voir en grand
+                              Détails
                             </button>
                             <button
                               onClick={() =>
                                 downloadImage(item.photoUrl, loc.characterName)
                               }
-                              className="p-2 bg-emerald-500 text-white rounded-lg"
+                              className="p-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 transition-colors"
                             >
                               <Download className="w-4 h-4" />
                             </button>
@@ -504,14 +570,14 @@ const App: React.FC = () => {
       )}
 
       {showViewer.isOpen && showViewer.item && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col">
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col">
           <div className="p-6 flex justify-between items-center bg-black/50 border-b border-white/10">
             <h3 className="font-display font-black text-xl text-white">
               {showViewer.target?.characterName}
             </h3>
             <button
               onClick={() => setShowViewer({ isOpen: false })}
-              className="p-2 bg-white/10 rounded-full text-white"
+              className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
             >
               <X />
             </button>
@@ -519,12 +585,12 @@ const App: React.FC = () => {
           <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6 overflow-y-auto">
             <img
               src={showViewer.item.photoUrl}
-              className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl border border-white/20 object-contain"
+              className="max-w-full max-h-[70vh] rounded-3xl shadow-2xl border border-white/20 object-contain"
               alt="Full"
             />
-            <div className="bg-white/5 border border-white/10 p-6 rounded-2xl max-w-md w-full text-center">
+            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl max-w-md w-full text-center shadow-2xl">
               <p className="text-pink-400 text-[10px] font-black uppercase tracking-widest mb-2">
-                Sa réplique magique
+                Réplique magique
               </p>
               <p className="text-lg font-display italic text-white leading-tight">
                 "{showViewer.item.quote}"
@@ -539,13 +605,13 @@ const App: React.FC = () => {
                   showViewer.target?.characterName || "Toon"
                 )
               }
-              className="py-4 bg-white text-black font-black uppercase text-xs rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+              className="py-4 bg-white text-black font-black uppercase text-xs rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl"
             >
               <Download className="w-5 h-5" /> Enregistrer
             </button>
             <button
               onClick={() => setShowViewer({ isOpen: false })}
-              className="py-4 bg-white/10 text-white font-bold uppercase text-xs rounded-xl border border-white/20 active:scale-95 transition-all"
+              className="py-4 bg-white/10 text-white font-bold uppercase text-xs rounded-2xl border border-white/20 active:scale-95 transition-all hover:bg-white/20"
             >
               Fermer
             </button>

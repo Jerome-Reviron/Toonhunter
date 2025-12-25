@@ -1,6 +1,14 @@
 import React from "react";
 import { LocationTarget, Coordinates } from "../types";
-import { MapPin, Navigation, Star, Lock, Target, Trophy } from "lucide-react";
+import {
+  MapPin,
+  Navigation,
+  Star,
+  Lock,
+  Target,
+  Trophy,
+  MapPinHouse,
+} from "lucide-react";
 
 interface LocationCardProps {
   location: LocationTarget;
@@ -16,7 +24,7 @@ const calculateDistance = (
   lat2: number,
   lon2: number
 ) => {
-  const R = 6371; // km
+  const R = 6371000; // Rayon de la terre en METRES
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -27,7 +35,7 @@ const calculateDistance = (
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const d = R * c;
-  return d; // distance in km
+  return d; // Distance en METRES
 };
 
 export const LocationCard: React.FC<LocationCardProps> = ({
@@ -37,7 +45,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
   isCollected,
   hasAccess,
 }) => {
-  const distance = userCoords
+  const distanceInMeters = userCoords
     ? calculateDistance(
         userCoords.latitude,
         userCoords.longitude,
@@ -47,12 +55,17 @@ export const LocationCard: React.FC<LocationCardProps> = ({
     : null;
 
   const isNearby =
-    distance !== null && distance * 1000 <= location.radiusMeters;
-  const distanceDisplay = distance
-    ? distance < 1
-      ? `${(distance * 1000).toFixed(0)}m`
-      : `${distance.toFixed(1)}km`
-    : "Localisation...";
+    distanceInMeters !== null && distanceInMeters <= location.radiusMeters;
+
+  // Correction ici : on affiche une décimale pour voir la précision (ex: 0.5m)
+  const distanceDisplay =
+    distanceInMeters !== null
+      ? distanceInMeters < 1
+        ? "Sur place"
+        : distanceInMeters < 1000
+        ? `${distanceInMeters.toFixed(1)}m`
+        : `${(distanceInMeters / 1000).toFixed(2)}km`
+      : "Localisation...";
 
   const borderColor =
     location.rarity === "Legendary"
@@ -116,10 +129,18 @@ export const LocationCard: React.FC<LocationCardProps> = ({
         <div className="flex items-center justify-between mt-4 pt-2 border-t border-white/5">
           <div
             className={`flex items-center text-xs font-bold ${
-              !hasAccess ? "text-gray-600" : "text-pink-400"
+              !hasAccess
+                ? "text-gray-600"
+                : distanceInMeters !== null && distanceInMeters < 5
+                ? "text-emerald-400 animate-pulse"
+                : "text-pink-400"
             }`}
           >
-            <Navigation className="w-3 h-3 mr-1" />
+            {distanceInMeters !== null && distanceInMeters < 5 ? (
+              <MapPinHouse className="w-3 h-3 mr-1" />
+            ) : (
+              <Navigation className="w-3 h-3 mr-1" />
+            )}
             {distanceDisplay}
           </div>
 
