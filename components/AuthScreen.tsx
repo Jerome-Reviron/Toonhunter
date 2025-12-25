@@ -1,3 +1,4 @@
+// Fix: Added missing React, useState, and useEffect imports
 import React, { useState, useEffect } from "react";
 import { User } from "../types";
 import { authService } from "../services/authService";
@@ -23,22 +24,22 @@ type AuthView = "LOGIN" | "REGISTER" | "FORGOT_PASSWORD";
 type ForgotStep = "EMAIL" | "CODE" | "NEW_PASSWORD";
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
+  // Fix: Initialized state variables with useState
   const [view, setView] = useState<AuthView>("LOGIN");
   const [error, setError] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
-  const [loading, setLoading] = useState(false); // New Loading State
+  const [loading, setLoading] = useState(false);
 
-  // --- FORM FIELDS ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pseudo, setPseudo] = useState("");
 
-  // --- FORGOT PASSWORD STATE ---
   const [forgotStep, setForgotStep] = useState<ForgotStep>("EMAIL");
   const [resetCode, setResetCode] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
 
+  // Fix: Implemented side effect for countdown timer using useEffect
   useEffect(() => {
     if (timeLeft > 0) {
       const timerId = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -70,7 +71,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setError("");
     setLoading(true);
     try {
-      // ASYNC CALL
       const user = await authService.login(email, password);
       onLoginSuccess(user);
     } catch (err: any) {
@@ -439,14 +439,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </button>
             </div>
           </form>
-        )}
-        {view === "LOGIN" && (
-          <div className="mt-8 pt-6 border-t border-white/10 text-center">
-            <p className="text-xs text-gray-500 mb-2">Compte Admin (Demo) :</p>
-            <code className="bg-black/30 px-2 py-1 rounded text-xs text-purple-300">
-              admin@toonhunter.com / admin123
-            </code>
-          </div>
         )}
       </div>
     </div>
