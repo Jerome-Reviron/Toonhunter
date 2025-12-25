@@ -1,27 +1,32 @@
 import { GoogleGenAI } from "@google/genai";
 import { LocationTarget } from "../types";
 
-// Initialisation de l'IA
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Cette déclaration supprime le soulignement rouge dans VS Code pour le côté client
+declare var process: {
+  env: {
+    API_KEY: string;
+  };
+};
 
 /**
- * Génère le personnage Toon en un seul appel.
- * Version utilisant gemini-2.5-flash-image pour une meilleure intégration.
+ * Service pour interagir avec l'IA Gemini.
  */
 export const generateCharacterPhoto = async (
   base64Image: string,
   target: LocationTarget
 ): Promise<{ image: string; quote: string }> => {
+  // Utilisation stricte de process.env.API_KEY injectée par Vite
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey || apiKey === "") {
+    throw new Error("Clé API manquante dans le fichier .env (VITE_API_KEY)");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   try {
-    if (!base64Image) throw new Error("Image source manquante");
-
-    console.log(
-      `[Gemini] Tentative de génération pour: ${target.characterName}`
-    );
-
-    // 1. Génération de l'image (Gemini 2.5 Flash Image)
-    // On utilise un prompt très direct pour éviter que le modèle ne fasse que décrire l'image
-    const imageResponse = await ai.models.generateContent({
+    // 1. Génération de l'image (Toonification)
+    const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-image",
       contents: {
         parts: [
@@ -32,10 +37,9 @@ export const generateCharacterPhoto = async (
             },
           },
           {
-            text: `COMMAND: Modify this image. Add a 3D Pixar-style character named "${target.characterName}" into the scene. 
-            Context: ${target.promptContext}. 
-            The character MUST be integrated naturally with realistic shadows and lighting. 
-            Interaction: If there is a ${target.validationKeywords}, the character should be placed relative to it.`,
+            text: `COMMAND: Add a 3D Pixar-style ${target.characterName} into this photo. 
+            Placement: ${target.promptContext}. 
+            The character must be high-quality 3D, perfectly integrated with shadows and lighting.`,
           },
         ],
       },
@@ -46,43 +50,41 @@ export const generateCharacterPhoto = async (
       },
     });
 
-    let processedImage = null;
+    let processedImageBase64 = "";
+    let generatedQuote = "";
 
-    // Vérification rigoureuse des candidats
-    if (imageResponse.candidates && imageResponse.candidates[0].content.parts) {
-      for (const part of imageResponse.candidates[0].content.parts) {
+    const candidate = response.candidates?.[0];
+    if (candidate?.content?.parts) {
+      for (const part of candidate.content.parts) {
         if (part.inlineData) {
-          processedImage = part.inlineData.data;
-          break;
+          // Correction TypeScript: on assure que data n'est pas undefined
+          processedImageBase64 = part.inlineData.data || "";
+        } else if (part.text) {
+          // Correction TypeScript: on assure que text n'est pas undefined
+          generatedQuote = part.text || "";
         }
       }
     }
 
-    // Si aucune image n'a été générée (le modèle a peut-être juste répondu par du texte)
-    if (!processedImage) {
-      console.error(
-        "[Gemini] Le modèle n'a pas renvoyé d'image. Contenu reçu:",
-        imageResponse.text
-      );
-      throw new Error(
-        "Le personnage n'a pas pu se matérialiser. Réessayez avec une meilleure luminosité."
-      );
+    if (!processedImageBase64) {
+      throw new Error("L'image n'a pas pu être générée.");
     }
 
-    // 2. Génération de la réplique
-    const textResponse = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Tu es ${target.characterName}. L'utilisateur vient de te trouver dans la vie réelle grâce à sa caméra. Dis une phrase très courte (max 8 mots), joyeuse et magique pour le saluer.`,
-    });
-
-    console.log("[Gemini] Génération réussie !");
+    // 2. Génération de la citation si non présente dans la première réponse
+    if (!generatedQuote) {
+      const textResponse = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Tu es ${target.characterName}. Dis une phrase de 8 mots max pour saluer l'utilisateur.`,
+      });
+      generatedQuote = textResponse.text || "Salut !";
+    }
 
     return {
-      image: processedImage,
-      quote: textResponse.text || `Oh, tu m'as trouvé ! ✨`,
+      image: processedImageBase64,
+      quote: generatedQuote,
     };
   } catch (error: any) {
-    console.error("[Gemini Service Error]:", error);
+    console.error("[Gemini Error]:", error);
     throw error;
   }
 };
