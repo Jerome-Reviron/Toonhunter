@@ -16,14 +16,25 @@ ToonHunter est une application web innovante de chasse aux trésors utilisant l'
 - **IA** : Google Gemini API (`gemini-2.5-flash-image` & `gemini-3-flash-preview`).
 - **Backend (Optionnel)** : Compatible avec une API PHP/MySQL (Laragon).
 
+## 🌿 Stratégie de Branches
+
+Ce projet utilise une structure de branches simple et efficace :
+
+- **`main`** : Version stable et déployable de l'application.
+- **`develop`** : Branche principale de développement. Toutes les nouvelles fonctionnalités sont testées ici.
+
 ## 🚀 Installation Locale
 
 1. Clonez le dépôt :
    ```bash
-   git clone https://github.com/VOTRE_NOM/toon-hunter.git
+   git clone https://github.com/Jerome-Reviron/Toonhunter.git
    ```
-2. Ouvrez `index.html` avec l'extension **Live Server** de VS Code.
-3. Configurez votre clé API dans les variables d'environnement (si déploiement).
+2. Basculez sur la branche de développement :
+   ```bash
+   git checkout develop
+   ```
+3. Ouvrez `index.html` avec l'extension **Live Server** de VS Code.
+4. Configurez votre clé API dans les variables d'environnement.
 
 ## 💰 Estimation des coûts API
 
