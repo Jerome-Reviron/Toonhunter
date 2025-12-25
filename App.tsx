@@ -15,7 +15,17 @@ import { authService } from "./services/authService";
 import { locationService } from "./services/locationService";
 import { collectionService } from "./services/collectionService";
 import { generateCharacterPhoto } from "./services/geminiService";
-import { Map, Trophy, Lock, LogOut, X, Download, Sparkles } from "lucide-react";
+import {
+  Map,
+  Trophy,
+  Lock,
+  LogOut,
+  X,
+  Download,
+  Sparkles,
+  AlertTriangle,
+  RefreshCcw,
+} from "lucide-react";
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -39,6 +49,7 @@ const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<"map" | "collection" | "admin">(
     "map"
   );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
@@ -95,6 +106,7 @@ const App: React.FC = () => {
     setAppState(AppState.LIST);
     setAnalysisResult(null);
     setSelectedTarget(null);
+    setErrorMessage(null);
   }, []);
 
   const downloadImage = async (base64Data: string, fileName: string) => {
@@ -125,6 +137,7 @@ const App: React.FC = () => {
   const handleCapture = async (base64Image: string) => {
     if (!selectedTarget) return;
     setAppState(AppState.ANALYZING);
+    setErrorMessage(null);
 
     try {
       const result = await generateCharacterPhoto(base64Image, selectedTarget);
@@ -153,8 +166,15 @@ const App: React.FC = () => {
       setAppState(AppState.RESULT);
     } catch (error: any) {
       console.error("Capture Error:", error);
-      alert(error.message || "Erreur lors de la capture.");
-      handleFinish();
+      let msg = "Une interférence magique empêche la matérialisation.";
+      if (
+        error.message?.includes("429") ||
+        error.message?.toLowerCase().includes("quota")
+      ) {
+        msg = "La Magie est en panne. Veuillez réessayer dans un moment.";
+      }
+      setErrorMessage(msg);
+      setAppState(AppState.ERROR);
     }
   };
 
@@ -169,6 +189,36 @@ const App: React.FC = () => {
     );
   }
 
+  if (appState === AppState.ERROR) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col items-center justify-center p-8 text-center">
+        <div className="mb-6 p-4 bg-red-500/10 rounded-full">
+          <AlertTriangle className="w-12 h-12 text-red-500" />
+        </div>
+        <h2 className="text-2xl font-display font-black text-white mb-4">
+          Les éclats de magie ont perturbé la capture !
+        </h2>
+        <p className="text-gray-400 text-sm max-w-xs mb-12 leading-relaxed">
+          {errorMessage}
+        </p>
+        <div className="flex flex-col gap-4 w-full max-w-xs">
+          <button
+            onClick={() => setAppState(AppState.CAMERA)}
+            className="w-full py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 hover:bg-white/20 transition-all"
+          >
+            <RefreshCcw className="w-4 h-4" /> Réessayer la capture
+          </button>
+          <button
+            onClick={handleFinish}
+            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-black uppercase text-white shadow-lg active:scale-95 transition-all"
+          >
+            Retour au parc
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (appState === AppState.ANALYZING) {
     return (
       <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col items-center justify-center p-8 text-center">
@@ -178,14 +228,14 @@ const App: React.FC = () => {
           <Sparkles className="absolute w-12 h-12 text-cyan-300 fill-purple-500/30 animate-pulse drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]" />
         </div>
         <h2 className="text-2xl font-display font-black text-white">
-          La magie arrive...
+          Magie en cours...
         </h2>
-        <p className="text-gray-400 text-sm mt-2">
-          Votre Toon se matérialise dans la scène
+        <p className="text-gray-400 text-sm mt-2 max-w-[200px]">
+          {selectedTarget?.characterName} arrive dans votre photo !
         </p>
         <button
           onClick={handleFinish}
-          className="mt-12 text-gray-500 underline text-xs uppercase tracking-widest"
+          className="mt-12 text-gray-500 underline text-xs uppercase tracking-widest hover:text-white transition-colors"
         >
           Annuler la magie
         </button>
@@ -196,7 +246,7 @@ const App: React.FC = () => {
   if (appState === AppState.RESULT && analysisResult) {
     return (
       <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col overflow-y-auto">
-        <div className="p-6 flex justify-between items-center bg-black/40 backdrop-blur-md sticky top-0 z-10">
+        <div className="p-6 flex justify-between items-center bg-black/40 backdrop-blur-md sticky top-0 z-10 border-b border-white/10">
           <h2 className="text-xl font-display font-black text-white">
             Capture Réussie !
           </h2>
@@ -215,7 +265,7 @@ const App: React.FC = () => {
               alt="Result"
             />
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center shadow-inner">
             <p className="text-pink-400 font-bold mb-1 uppercase text-[10px] tracking-widest">
               Message de {selectedTarget?.characterName}
             </p>
@@ -231,7 +281,7 @@ const App: React.FC = () => {
                   selectedTarget?.characterName || "Toon"
                 )
               }
-              className="py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 active:scale-95 transition-all"
+              className="py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-white/20"
             >
               <Download className="w-5 h-5" /> Sauvegarder
             </button>
@@ -466,10 +516,10 @@ const App: React.FC = () => {
               <X />
             </button>
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6 overflow-y-auto">
             <img
               src={showViewer.item.photoUrl}
-              className="max-w-full max-h-[60vh] rounded-2xl shadow-2xl border border-white/20"
+              className="max-w-full max-h-[70vh] rounded-2xl shadow-2xl border border-white/20 object-contain"
               alt="Full"
             />
             <div className="bg-white/5 border border-white/10 p-6 rounded-2xl max-w-md w-full text-center">
@@ -481,7 +531,7 @@ const App: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="p-8 grid grid-cols-2 gap-4">
+          <div className="p-8 grid grid-cols-2 gap-4 bg-black/50 border-t border-white/10">
             <button
               onClick={() =>
                 downloadImage(
@@ -489,13 +539,13 @@ const App: React.FC = () => {
                   showViewer.target?.characterName || "Toon"
                 )
               }
-              className="py-4 bg-white text-black font-black uppercase text-xs rounded-xl flex items-center justify-center gap-2"
+              className="py-4 bg-white text-black font-black uppercase text-xs rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
             >
               <Download className="w-5 h-5" /> Enregistrer
             </button>
             <button
               onClick={() => setShowViewer({ isOpen: false })}
-              className="py-4 bg-white/10 text-white font-bold uppercase text-xs rounded-xl border border-white/20"
+              className="py-4 bg-white/10 text-white font-bold uppercase text-xs rounded-xl border border-white/20 active:scale-95 transition-all"
             >
               Fermer
             </button>
