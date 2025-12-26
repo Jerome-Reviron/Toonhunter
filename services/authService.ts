@@ -61,7 +61,12 @@ export const authService = {
     }
   },
 
-  // Fix: Implemented requestPasswordReset method expected by AuthScreen.tsx
+  // --------------------------------------------------------------------
+  // 🔐 MOT DE PASSE OUBLIÉ — NOUVELLE VERSION SÉCURISÉE
+  // --------------------------------------------------------------------
+
+  // Ancienne version mockée (conservée pour historique)
+  /*
   requestPasswordReset: async (email: string): Promise<string> => {
     if (API_CONFIG.USE_MOCK_DATA) {
       await new Promise((r) => setTimeout(r, 500));
@@ -69,8 +74,26 @@ export const authService = {
     }
     return "123456";
   },
+  */
 
-  // Fix: Implemented verifyResetCode method expected by AuthScreen.tsx
+  requestPasswordReset: async (email: string): Promise<void> => {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/forgot-password.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || "Impossible d'envoyer le code.");
+    }
+
+    // 🔒 Sécurité B : on ne renvoie jamais le code au frontend
+    return;
+  },
+
+  // Ancienne version mockée (conservée pour historique)
+  /*
   verifyResetCode: async (email: string, code: string): Promise<boolean> => {
     if (API_CONFIG.USE_MOCK_DATA) {
       await new Promise((r) => setTimeout(r, 500));
@@ -78,8 +101,28 @@ export const authService = {
     }
     return code === "123456";
   },
+  */
 
-  // Fix: Implemented resetPassword method expected by AuthScreen.tsx
+  verifyResetCode: async (email: string, code: string): Promise<boolean> => {
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/verify-reset-code.php`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      }
+    );
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || "Code incorrect ou expiré.");
+    }
+
+    return true;
+  },
+
+  // Ancienne version mockée (conservée pour historique)
+  /*
   resetPassword: async (
     email: string,
     code: string,
@@ -88,6 +131,26 @@ export const authService = {
     if (API_CONFIG.USE_MOCK_DATA) {
       await new Promise((r) => setTimeout(r, 800));
       return;
+    }
+  },
+  */
+
+  resetPassword: async (
+    email: string,
+    code: string,
+    password: string
+  ): Promise<void> => {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/reset-password.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, password }),
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(
+        data.message || "Impossible de réinitialiser le mot de passe."
+      );
     }
   },
 
