@@ -59,6 +59,25 @@ export const TARGET_LOCATIONS: LocationTarget[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1614027164847-1b28cfe1df60?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
+  {
+  id: "santa-pixar",
+  name: "Père Noël Magique",
+  description:
+    "TEST: Un Père Noël chaleureux en style Pixar. Vise le sol ou un endroit spacieux.",
+  coordinates: {
+    latitude: 45.7122501,
+    longitude: 3.190665,
+  },
+  radiusMeters: 9999999,
+  characterName: "Père Noël",
+  rarity: "Rare",
+  promptContext:
+    "A friendly 3D CGI SANTA CLAUS with a soft red suit, fluffy white beard and warm smile. He is standing BEHIND the human subject, gently leaning forward and peeking over their shoulder. The person in the foreground BLOCKS part of Santa's body (Occlusion). Realistic fabric textures, soft lighting, Pixar-style rendering. Joyful, magical, NOT scary.",
+  validationKeywords:
+    "floor, ground, carpet, santa, christmas, red suit, beard",
+  imageUrl:
+    "https://images.unsplash.com/photo-1543589077-47d81606c1bf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+},
 ];
 
 export const GOOGLE_MAPS_URL = (lat: number, lng: number) =>
