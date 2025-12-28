@@ -122,9 +122,14 @@ export const LocationCard: React.FC<LocationCardProps> = ({
         >
           {location.characterName}
         </h3>
-        <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+        <p className="text-xs text-white/80 mb-1 flex items-center gap-1">
           <MapPin className="w-3 h-3" /> {location.name}
         </p>
+        {location.description && (
+          <p className="text-xs text-gray-400 mb-1 leading-snug">
+            {location.description}
+          </p>
+        )}
 
         <div className="flex items-center justify-between mt-4 pt-2 border-t border-white/5">
           <div

@@ -28,6 +28,7 @@ import {
   Navigation2,
   Radar,
   CircleDot,
+  CircleHelp,
 } from "lucide-react";
 
 const App: React.FC = () => {
@@ -466,7 +467,7 @@ const App: React.FC = () => {
                     className={`relative overflow-hidden rounded-3xl border-2 transition-all duration-300 ${
                       isFound
                         ? "border-emerald-500/50 bg-gray-900 shadow-xl"
-                        : "border-white/5 bg-white/5 grayscale opacity-40 hover:opacity-50"
+                        : "border-white/5 bg-white/5 grayscale opacity-50 hover:opacity-80"
                     }`}
                   >
                     <div className="h-48 w-full relative">
@@ -477,10 +478,10 @@ const App: React.FC = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
                       {!isFound && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <Lock className="w-8 h-8 text-gray-500 mb-2" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
-                            Mystère
+                        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-100 pointer-events-none">
+                          <CircleHelp className="w-10 h-10 text-purple-300 mb-2 drop-shadow-[0_0_14px_rgba(220,150,255,0.9)] animate-pulse" />
+                          <span className="text-[12px] font-black uppercase tracking-widest text-purple-200 drop-shadow-[0_0_10px_rgba(220,150,255,0.8)] animate-pulse">
+                            À découvrir
                           </span>
                         </div>
                       )}
@@ -525,8 +526,8 @@ const App: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-500">
-                          Rendez-vous à {loc.name} pour le découvrir.
+                        <p className="text-xs text-gray-400">
+                          Destination : {loc.name}
                         </p>
                       )}
                     </div>
