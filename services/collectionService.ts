@@ -27,9 +27,9 @@ export const collectionService = {
   addTrophy: async (
     userId: string | number,
     locationId: string | number,
-    photoUrl: string,
+    photoUrl: string, // base64 envoyé ici
     quote: string
-  ): Promise<void> => {
+  ): Promise<string | null> => {
     if (API_CONFIG.USE_MOCK_DATA) {
       const current = await collectionService.getUserCollection(userId);
       current[locationId] = {
@@ -42,14 +42,29 @@ export const collectionService = {
         `${MOCK_COLLECTION_KEY}_${userId}`,
         JSON.stringify(current)
       );
-      return;
+      return photoUrl;
     }
 
-    await fetch(`${API_CONFIG.BASE_URL}/collection.php`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, locationId, photoUrl, quote }),
-    });
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/collection.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, locationId, photoUrl, quote }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        console.error("Erreur API addTrophy:", data);
+        return null;
+      }
+
+      // Le backend renvoie l’URL publique du fichier
+      return data.photoUrl || null;
+    } catch (e) {
+      console.error("Erreur addTrophy:", e);
+      return null;
+    }
   },
 
   removeTrophy: async (
@@ -65,6 +80,7 @@ export const collectionService = {
       );
       return;
     }
-    // API call for deletion...
+
+    // TODO: ajouter suppression côté backend si nécessaire
   },
 };

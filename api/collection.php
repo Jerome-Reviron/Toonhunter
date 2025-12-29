@@ -1,37 +1,26 @@
 <?php
-/* 
-require_once 'db.php';
+error_log("REAL FILE = " . __FILE__);
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $userId = $_GET['user_id'] ?? 0;
-    $stmt = $pdo->prepare("SELECT * FROM collection WHERE userId = ?");
-    $stmt->execute([$userId]);
-    $items = $stmt->fetchAll();
-    
-    $collection = [];
-    foreach ($items as $item) {
-        $collection[$item['locationId']] = $item;
-    }
-    echo json_encode(["collection" => $collection]);
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents("php://input"));
-    $stmt = $pdo->prepare("INSERT INTO collection (userId, locationId, photoUrl, quote) VALUES (?, ?, ?, ?)");
-    $stmt->execute([$data->userId, $data->locationId, $data->photoUrl, $data->quote]);
-    echo json_encode(["success" => true]);
-}
-*/
-
-
-// ---------------------------------------------------------
-// Version sécurisée et optimisée
-// ---------------------------------------------------------
 require_once __DIR__ . "/cors.php";
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . "/db.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
+$uploadDir = rtrim(__DIR__, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . "uploads";
+$publicPath = "/api/uploads/";
+
+// Debug
+error_log("UPLOAD DIR = " . $uploadDir);
+
+// Créer le dossier si nécessaire
+if (!file_exists($uploadDir)) {
+    if (!mkdir($uploadDir, 0777, true)) {
+        error_log("Impossible de créer le dossier uploads: " . $uploadDir);
+        http_response_code(500);
+        echo json_encode(["success" => false, "message" => "Erreur serveur: impossible de créer le dossier uploads."]);
+        exit;
+    }
+}
 
 // ---------------------------------------------------------
 // GET : récupérer la collection d’un utilisateur
@@ -57,10 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         return;
     }
 
-    // Formatage : indexer par locationId
     $collection = [];
     foreach ($items as $item) {
-        $collection[$item['locationId']] = $item;
+        $collection[$item['locationId']] = [
+            "locationId" => $item['locationId'],
+            "photoUrl"   => $item['photoUrl'],
+            "quote"      => $item['quote'],
+            "capturedAt" => $item['capturedAt'],
+        ];
     }
 
     echo json_encode(["success" => true, "collection" => $collection]);
@@ -69,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 
 // ---------------------------------------------------------
-// POST : ajouter un élément à la collection
+// POST : ajouter un trophée (avec sauvegarde fichier)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -84,25 +77,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $userId     = (int)($data->userId ?? 0);
     $locationId = (int)($data->locationId ?? 0);
-    $photoUrl   = trim($data->photoUrl ?? '');
+    $photoBase64 = $data->photoUrl ?? '';
     $quote      = trim($data->quote ?? '');
 
-    if ($userId <= 0 || $locationId <= 0 || $photoUrl === '') {
+    if ($userId <= 0 || $locationId <= 0 || $photoBase64 === '') {
         http_response_code(400);
-        echo json_encode(["success" => false, "message" => "Données incomplètes ou invalides."]);
+        echo json_encode(["success" => false, "message" => "Données incomplètes."]);
         return;
     }
 
+    // Extraction du base64
+    if (strpos($photoBase64, "base64,") !== false) {
+        $photoBase64 = explode("base64,", $photoBase64)[1];
+    }
+
+    $imageData = base64_decode($photoBase64);
+
+    if (!$imageData) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "message" => "Image invalide."]);
+        return;
+    }
+
+    // Nom unique
+    $fileName = "user_{$userId}_loc_{$locationId}_" . time() . ".jpg";
+    $filePath = $uploadDir . $fileName;
+    $publicUrl = $publicPath . $fileName;
+
+    // Sauvegarde du fichier
+    file_put_contents($filePath, $imageData);
+
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO collection (userId, locationId, photoUrl, quote) 
-            VALUES (:userId, :locationId, :photoUrl, :quote)
+            INSERT INTO collection (userId, locationId, photoUrl, quote, capturedAt)
+            VALUES (:userId, :locationId, :photoUrl, :quote, NOW())
+            ON DUPLICATE KEY UPDATE 
+                photoUrl = VALUES(photoUrl),
+                quote = VALUES(quote),
+                capturedAt = NOW()
         ");
 
         $stmt->execute([
             ':userId'     => $userId,
             ':locationId' => $locationId,
-            ':photoUrl'   => $photoUrl,
+            ':photoUrl'   => $publicUrl,
             ':quote'      => $quote
         ]);
     } catch (PDOException $e) {
@@ -112,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
-    echo json_encode(["success" => true]);
+    echo json_encode(["success" => true, "photoUrl" => $publicUrl]);
     return;
 }
 
