@@ -438,7 +438,7 @@ const App: React.FC = () => {
 
               <div className="flex gap-6 items-center">
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">
                     Rayon Scan
                   </p>
                   <div className="flex items-center gap-1.5 justify-end">
@@ -448,7 +448,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-pink-500 mb-0.5">
                     Toons proches
                   </p>
                   <div className="flex items-center gap-1.5 justify-end">
