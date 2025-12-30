@@ -8,7 +8,6 @@ import {
   CollectionItem,
 } from "./types";
 import { LocationCard } from "./components/LocationCard";
-import { CameraInterface } from "./components/CameraInterface";
 import { AdminPanel } from "./components/AdminPanel";
 import { AuthScreen } from "./components/AuthScreen";
 import { authService } from "./services/authService";
@@ -61,6 +60,24 @@ const App: React.FC = () => {
   );
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleNativeCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = (ev.target?.result as string).split(",")[1];
+
+      // 🔒 Empêche le navigateur mobile de relancer la page
+      e.target.value = "";
+
+      // 🔁 On garde EXACTEMENT la même logique qu’avant
+      handleCapture(base64);
+    };
+
+    reader.readAsDataURL(file);
+  };
 
   // ---------------------------------------------------------
   // Chargement utilisateur (sans changer l'état)
@@ -177,7 +194,10 @@ const App: React.FC = () => {
 
   const handleCapture = async (base64Image: string) => {
     if (!selectedTarget) return;
+
+    // 👉 Stabilise l'état AVANT l'appel réseau
     setAppState(AppState.ANALYZING);
+    await new Promise((resolve) => setTimeout(resolve, 10));
     setErrorMessage(null);
 
     try {
@@ -241,6 +261,8 @@ const App: React.FC = () => {
   }
 
   if (appState === AppState.ERROR) {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
     return (
       <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col items-center justify-center p-8 text-center">
         <div className="mb-6 p-4 bg-red-500/10 rounded-full">
@@ -249,16 +271,42 @@ const App: React.FC = () => {
         <h2 className="text-2xl font-display font-black text-white mb-4">
           Les éclats de magie ont perturbé la capture !
         </h2>
-        <p className="text-gray-400 text-sm max-w-xs mb-12 leading-relaxed">
-          {errorMessage}
-        </p>
+
+        {/* 👉 Affichage du message d’erreur */}
+        {errorMessage && (
+          <>
+            {errorMessage ===
+            "La capture n’est possible que depuis un appareil mobile." ? (
+              !isMobile && (
+                // 🔹 Ce message-là uniquement sur PC
+                <p className="text-gray-400 text-sm max-w-xs mb-12 leading-relaxed">
+                  {errorMessage}
+                </p>
+              )
+            ) : (
+              // 🔹 Les autres messages partout (mobile + PC)
+              <p className="text-gray-400 text-sm max-w-xs mb-12 leading-relaxed">
+                {errorMessage}
+              </p>
+            )}
+          </>
+        )}
+
         <div className="flex flex-col gap-4 w-full max-w-xs">
-          <button
-            onClick={() => setAppState(AppState.CAMERA)}
-            className="w-full py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 hover:bg-white/20 transition-all"
-          >
-            <RefreshCcw className="w-4 h-4" /> Réessayer la capture
-          </button>
+          {/* 👉 Bouton "Réessayer" uniquement sur mobile */}
+          {isMobile && (
+            <button
+              onClick={() => {
+                if (selectedTarget) {
+                  document.getElementById("native-capture")?.click();
+                }
+              }}
+              className="w-full py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 hover:bg-white/20 transition-all"
+            >
+              <RefreshCcw className="w-4 h-4" /> Réessayer la capture
+            </button>
+          )}
+
           <button
             onClick={handleFinish}
             className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-black uppercase text-white shadow-lg active:scale-95 transition-all"
@@ -266,30 +314,6 @@ const App: React.FC = () => {
             Retour au parc
           </button>
         </div>
-      </div>
-    );
-  }
-
-  if (appState === AppState.ANALYZING) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col items-center justify-center p-8 text-center">
-        <div className="relative mb-8 flex items-center justify-center">
-          <div className="absolute w-48 h-48 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="w-32 h-32 border-4 border-transparent border-t-purple-500 border-r-cyan-400 border-b-cyan-500 rounded-full animate-spin"></div>
-          <Sparkles className="absolute w-12 h-12 text-cyan-300 fill-purple-500/30 animate-pulse drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]" />
-        </div>
-        <h2 className="text-2xl font-display font-black text-white">
-          Magie en cours...
-        </h2>
-        <p className="text-gray-400 text-sm mt-2 max-w-[200px]">
-          {selectedTarget?.characterName} arrive dans votre photo !
-        </p>
-        <button
-          onClick={handleFinish}
-          className="mt-12 text-gray-500 underline text-xs uppercase tracking-widest hover:text-white transition-colors"
-        >
-          Annuler la magie
-        </button>
       </div>
     );
   }
@@ -354,6 +378,15 @@ const App: React.FC = () => {
         <div className="absolute top-20 -left-20 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-20 -right-20 w-96 h-96 bg-pink-600/10 rounded-full blur-[120px]"></div>
       </div>
+
+      <input
+        id="native-capture"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleNativeCapture}
+      />
 
       <header className="sticky top-0 z-30 bg-[#0f0518]/80 backdrop-blur-xl border-b border-white/10 p-4">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
@@ -475,10 +508,25 @@ const App: React.FC = () => {
                   onSelect={(t) => {
                     if (collection[t.id]) {
                       setCurrentTab("collection");
-                    } else {
-                      setSelectedTarget(t);
-                      setAppState(AppState.CAMERA);
+                      return;
                     }
+
+                    // 👉 Détection mobile
+                    const isMobile = /Android|iPhone|iPad|iPod/i.test(
+                      navigator.userAgent
+                    );
+
+                    if (!isMobile) {
+                      setErrorMessage(
+                        "La capture n’est possible que depuis un appareil mobile."
+                      );
+                      setAppState(AppState.ERROR);
+                      return;
+                    }
+
+                    // 👉 Flux mobile normal
+                    setSelectedTarget(t);
+                    document.getElementById("native-capture")?.click();
                   }}
                 />
               ))}
@@ -599,17 +647,6 @@ const App: React.FC = () => {
           />
         )}
       </main>
-
-      {appState === AppState.CAMERA && selectedTarget && (
-        <CameraInterface
-          target={selectedTarget}
-          onClose={() => {
-            setAppState(AppState.LIST);
-            setSelectedTarget(null);
-          }}
-          onCapture={handleCapture}
-        />
-      )}
 
       {showViewer.isOpen && showViewer.item && (
         <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col">

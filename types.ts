@@ -40,7 +40,6 @@ export enum AppState {
   AUTH = "AUTH",
   LIST = "LIST",
   COLLECTION = "COLLECTION",
-  CAMERA = "CAMERA",
   ANALYZING = "ANALYZING",
   RESULT = "RESULT",
   ERROR = "ERROR",
