@@ -18,6 +18,11 @@ interface LocationCardProps {
   hasAccess: boolean;
 }
 
+// ---------------------------------------------------------
+// MODE DÉVELOPPEUR : bypass GPS
+// ---------------------------------------------------------
+const DEV_MODE = true; // 👉 Remettre false pour tester sur téléphone
+
 const calculateDistance = (
   lat1: number,
   lon1: number,
@@ -45,7 +50,12 @@ export const LocationCard: React.FC<LocationCardProps> = ({
   isCollected,
   hasAccess,
 }) => {
-  const distanceInMeters = userCoords
+  // ---------------------------------------------------------
+  // Distance avec bypass DEV_MODE
+  // ---------------------------------------------------------
+  const distanceInMeters = DEV_MODE
+    ? 0 // Toujours "Sur place" en mode développeur
+    : userCoords
     ? calculateDistance(
         userCoords.latitude,
         userCoords.longitude,
@@ -54,10 +64,16 @@ export const LocationCard: React.FC<LocationCardProps> = ({
       )
     : null;
 
-  const isNearby =
-    distanceInMeters !== null && distanceInMeters <= location.radiusMeters;
+  // ---------------------------------------------------------
+  // Capture possible ?
+  // ---------------------------------------------------------
+  const isNearby = DEV_MODE
+    ? true // Toujours capturable en mode développeur
+    : distanceInMeters !== null && distanceInMeters <= location.radiusMeters;
 
-  // Correction ici : on affiche une décimale pour voir la précision (ex: 0.5m)
+  // ---------------------------------------------------------
+  // Affichage distance
+  // ---------------------------------------------------------
   const distanceDisplay =
     distanceInMeters !== null
       ? distanceInMeters < 1

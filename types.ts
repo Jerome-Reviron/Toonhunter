@@ -36,6 +36,7 @@ export interface LocationTarget {
 }
 
 export enum AppState {
+  SPLASH = "SPLASH",
   AUTH = "AUTH",
   LIST = "LIST",
   COLLECTION = "COLLECTION",

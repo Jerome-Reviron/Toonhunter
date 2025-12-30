@@ -1,0 +1,45 @@
+.splash-container {
+  position: fixed;
+  inset: 0;
+  background: #0f0518; /* ton violet très sombre */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.splash-logo {
+  width: 180px;
+  animation: netflix-intro 3.5s ease forwards;
+  filter: drop-shadow(0 0 20px rgba(255, 180, 0, 0.4));
+}
+
+@keyframes netflix-intro {
+  /* Phase 1 : apparition */
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+    filter: blur(20px) brightness(0.5);
+  }
+
+  /* Phase 2 : zoom + glow */
+  30% {
+    transform: scale(1.05);
+    opacity: 1;
+    filter: blur(0px) brightness(1.1);
+  }
+
+  80% {
+    transform: scale(1.2);
+    opacity: 1;
+    filter: drop-shadow(0 0 20px rgba(233, 203, 246, 0.3));
+  }
+
+  /* Phase 3 : disparition */
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+    filter: blur(10px) brightness(2);
+  }
+}

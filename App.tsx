@@ -15,6 +15,7 @@ import { authService } from "./services/authService";
 import { locationService } from "./services/locationService";
 import { collectionService } from "./services/collectionService";
 import { generateCharacterPhoto } from "./services/geminiService";
+import SplashScreen from "./components/SplashScreen/SplashScreen";
 import {
   Map,
   Trophy,
@@ -38,7 +39,10 @@ const App: React.FC = () => {
   const [selectedTarget, setSelectedTarget] = useState<LocationTarget | null>(
     null
   );
-  const [appState, setAppState] = useState<AppState>(AppState.AUTH);
+
+  // 👉 Splash activé au démarrage
+  const [appState, setAppState] = useState<AppState>(AppState.SPLASH);
+
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
     null
   );
@@ -47,22 +51,30 @@ const App: React.FC = () => {
     item?: CollectionItem;
     target?: LocationTarget;
   }>({ isOpen: false });
+
   const [collection, setCollection] = useState<Record<string, CollectionItem>>(
     {}
   );
+
   const [currentTab, setCurrentTab] = useState<"map" | "collection" | "admin">(
     "map"
   );
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // ---------------------------------------------------------
+  // Chargement utilisateur (sans changer l'état)
+  // ---------------------------------------------------------
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
-      setAppState(AppState.LIST);
     }
   }, []);
 
+  // ---------------------------------------------------------
+  // Chargement des données du parc
+  // ---------------------------------------------------------
   useEffect(() => {
     if (user && appState === AppState.LIST) {
       const loadData = async () => {
@@ -81,9 +93,11 @@ const App: React.FC = () => {
     }
   }, [user, appState]);
 
+  // ---------------------------------------------------------
+  // GPS
+  // ---------------------------------------------------------
   useEffect(() => {
     if (user && "geolocation" in navigator) {
-      // Configuration GPS ultra-précise : pas de cache, timeout court
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
           setUserLocation({
@@ -102,6 +116,23 @@ const App: React.FC = () => {
     }
   }, [user]);
 
+  // ---------------------------------------------------------
+  // SPLASH SCREEN → transition automatique
+  // ---------------------------------------------------------
+  useEffect(() => {
+    if (appState === AppState.SPLASH) {
+      const timer = setTimeout(() => {
+        const currentUser = authService.getCurrentUser();
+        setAppState(currentUser ? AppState.LIST : AppState.AUTH);
+      }, 3500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [appState]);
+
+  // ---------------------------------------------------------
+  // Déconnexion
+  // ---------------------------------------------------------
   const handleLogout = () => {
     authService.logout();
     setUser(null);
@@ -188,6 +219,16 @@ const App: React.FC = () => {
     }
   };
 
+  // ---------------------------------------------------------
+  // 👉 Splash affiché en priorité
+  // ---------------------------------------------------------
+  if (appState === AppState.SPLASH) {
+    return <SplashScreen />;
+  }
+
+  // ---------------------------------------------------------
+  // Authentification
+  // ---------------------------------------------------------
   if (appState === AppState.AUTH) {
     return (
       <AuthScreen
