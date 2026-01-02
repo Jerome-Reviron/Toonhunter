@@ -1,0 +1,118 @@
+DÉMARRAGE À ZÉRO : PC ÉTEINT + TÉLÉPHONE ÉTEINT
+✅ ÉTAPE 1 — Allumer ton téléphone
+Allume ton Galaxy S21 FE.
+
+Déverrouille-le.
+
+Active le Wi-Fi ou la 4G (pas obligatoire mais utile).
+
+✅ ÉTAPE 2 — Vérifier les réglages développeur
+Va dans :
+
+Paramètres → Options développeur
+
+Active :
+
+Débogage USB → ON
+
+Débogage sans fil → ON
+
+Installer via USB → ON
+
+Débogage USB (paramètres de sécurité) → ON (si présent)
+
+Bloquer les connexions USB quand verrouillé → OFF
+
+Si tu ne trouves pas une option, ce n’est pas grave, continue.
+
+✅ ÉTAPE 3 — Allumer ton PC
+Allume ton PC Windows.
+
+Attends qu’il soit complètement démarré.
+
+✅ ÉTAPE 4 — Brancher ton téléphone AVEC LE CÂBLE SAMSUNG D’ORIGINE
+C’est essentiel.
+
+Branche le câble au PC.
+
+Branche le câble au téléphone.
+
+Sur ton téléphone, une notification USB apparaît.
+
+Choisis :
+
+👉 Transfert de fichiers / Android Auto
+
+✅ ÉTAPE 5 — Autoriser la connexion ADB
+C’est l’étape la plus importante.
+
+Sur ton téléphone, tu dois voir une popup :
+
+Autoriser le débogage USB depuis cet ordinateur ?
+
+Fais :
+
+Coche Toujours autoriser depuis cet ordinateur
+
+Appuie sur Autoriser
+
+⚠️ Si tu ne vois pas la popup :
+
+Débranche → rebranche
+
+Déverrouille ton téléphone
+
+Change de port USB
+
+Redémarre ton téléphone
+
+✅ ÉTAPE 6 — Vérifier que Windows reconnaît ton téléphone
+Sur ton PC :
+
+Ouvre Explorateur Windows
+
+Va dans Ce PC
+
+Tu dois voir ton téléphone apparaître comme stockage.
+
+Si oui → le câble est bon.
+
+✅ ÉTAPE 7 — Installer ADB (si pas déjà fait)
+Télécharge Android Platform Tools (Google)
+
+Dézippe dans :
+C:\platform-tools\
+
+Ouvre CMD :
+
+Code
+cd C:\platform-tools
+adb devices
+Tu dois voir :
+
+Code
+List of devices attached
+XXXXXXXX    device
+Si tu vois unauthorized, retourne sur ton téléphone → accepte la popup.
+
+✅ ÉTAPE 8 — Ouvrir Chrome sur ton téléphone
+Lance Chrome sur ton Galaxy S21 FE.
+
+Ouvre n’importe quel site (ex : https://example.com).
+
+✅ ÉTAPE 9 — Ouvrir Chrome sur ton PC
+Lance Chrome sur ton PC.
+
+Va dans la barre d’adresse et tape :
+
+Code
+chrome://inspect/#devices
+Attends 3–5 secondes.
+
+Tu dois voir :
+
+Le nom de ton téléphone
+
+Les onglets Chrome ouverts sur ton téléphone
+
+Le bouton Inspect

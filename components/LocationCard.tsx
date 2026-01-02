@@ -76,7 +76,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({
   // ---------------------------------------------------------
   const distanceDisplay =
     distanceInMeters !== null
-      ? distanceInMeters < 1
+      ? distanceInMeters < 5
         ? "Sur place"
         : distanceInMeters < 1000
         ? `${distanceInMeters.toFixed(1)}m`

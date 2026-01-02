@@ -61,18 +61,60 @@ const App: React.FC = () => {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  function compressBase64(base64: string, quality = 0.6): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+
+        // Taille max (réduit la résolution)
+        const maxSize = 1024;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx!.drawImage(img, 0, 0, width, height);
+
+        // Compression JPEG
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed);
+      };
+
+      img.src = base64;
+    });
+  }
+
   const handleNativeCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const base64 = (ev.target?.result as string).split(",")[1];
+    reader.onload = async (ev) => {
+      const base64Full = ev.target?.result as string;
 
-      // 🔒 Empêche le navigateur mobile de relancer la page
       e.target.value = "";
 
-      // 🔁 On garde EXACTEMENT la même logique qu’avant
+      // Compression sur le base64 COMPLET (avec prefix)
+      const compressedFull = await compressBase64(base64Full, 0.6);
+
+      // On retire le prefix APRES compression
+      const base64 = compressedFull.split(",")[1];
+
       handleCapture(base64);
     };
 
@@ -125,7 +167,7 @@ const App: React.FC = () => {
         (err) => console.error("GPS Error:", err),
         {
           enableHighAccuracy: true,
-          timeout: 2000,
+          timeout: 20000,
           maximumAge: 0,
         }
       );
@@ -210,20 +252,22 @@ const App: React.FC = () => {
         quote: result.quote,
       });
 
-      const newItem: CollectionItem = {
-        locationId: selectedTarget.id,
-        photoUrl: fullResultImage,
-        quote: result.quote,
-        capturedAt: new Date().toISOString(),
-      };
-
-      setCollection((prev) => ({ ...prev, [selectedTarget.id]: newItem }));
-      await collectionService.addTrophy(
+      // 1) On enregistre dans la BDD et on récupère l’item complet
+      const savedItem = await collectionService.addTrophy(
         user!.id,
         selectedTarget.id,
         fullResultImage,
         result.quote
       );
+
+      if (savedItem) {
+        // 2) On met à jour la collection locale AVEC l’item renvoyé par le backend
+        setCollection((prev) => ({
+          ...prev,
+          [selectedTarget.id]: savedItem,
+        }));
+      }
+
       setAppState(AppState.RESULT);
     } catch (error: any) {
       console.error("Capture Error:", error);
@@ -318,6 +362,14 @@ const App: React.FC = () => {
     );
   }
 
+  if (!userLocation) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[#0f0518] text-sm font-black uppercase tracking-widest text-pink-500">
+        Recherche de votre position GPS…
+      </div>
+    );
+  }
+
   if (appState === AppState.RESULT && analysisResult) {
     return (
       <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col overflow-y-auto">
@@ -335,7 +387,7 @@ const App: React.FC = () => {
         <div className="px-6 flex-1 flex flex-col gap-4 max-w-md mx-auto w-full pb-12 pt-4">
           <div className="rounded-3xl overflow-hidden shadow-2xl border-2 border-pink-500/50 bg-gray-900 shine-effect">
             <img
-              src={analysisResult.processedImage}
+              src={`data:image/jpeg;base64,${analysisResult.processedImage}`}
               className="w-full aspect-[3/4] object-cover"
               alt="Result"
             />
@@ -561,7 +613,11 @@ const App: React.FC = () => {
                   >
                     <div className="h-48 w-full relative">
                       <img
-                        src={isFound ? item.photoUrl : loc.imageUrl}
+                        src={
+                          isFound
+                            ? `data:image/jpeg;base64,${item.photoUrl}`
+                            : loc.imageUrl
+                        }
                         alt={loc.name}
                         className="h-full w-full object-cover"
                       />
@@ -663,7 +719,7 @@ const App: React.FC = () => {
           </div>
           <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6 overflow-y-auto">
             <img
-              src={showViewer.item.photoUrl}
+              src={`data:image/jpeg;base64,${showViewer.item.photoUrl}`}
               className="max-w-full max-h-[70vh] rounded-3xl shadow-2xl border border-white/20 object-contain"
               alt="Full"
             />

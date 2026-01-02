@@ -1,111 +1,93 @@
-import { GoogleGenAI } from "@google/genai";
 import { LocationTarget } from "../types";
 
-// Déclaration pour éviter les erreurs TypeScript avec import.meta.env
-declare global {
-  interface ImportMeta {
-    env: {
-      VITE_API_KEY: string;
-    };
-  }
-}
-
 /**
- * Service pour interagir avec l'IA Gemini.
- * Gère l'incrustation 3D + la génération d'une citation.
+ * Service pour interagir avec le backend Gemini.
+ * Envoie l'image au backend PHP qui appelle Gemini 2.5 Flash Image via OAuth.
  */
 export const generateCharacterPhoto = async (
   base64Image: string,
   target: LocationTarget
 ): Promise<{ image: string; quote: string }> => {
-  const apiKey = import.meta.env.VITE_API_KEY;
-
-  if (!apiKey) {
-    throw new Error(
-      "Clé API manquante. Ajoutez VITE_API_KEY dans votre fichier .env du frontend."
-    );
-  }
-
-  // Initialisation de l'API Gemini
-  const ai = new GoogleGenAI({ apiKey });
+  console.log("📸 [Gemini] generateCharacterPhoto() appelé");
+  console.log("📤 [Gemini] Taille image base64 envoyée :", base64Image.length);
+  console.log("🎯 [Gemini] Target envoyé :", target);
 
   try {
-    // 1. Génération de l'image (incrustation 3D)
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: base64Image,
-            },
-          },
-          {
-            text: `INSTRUCTION: Add a high-quality 3D Pixar-style character named "${target.characterName}" into this photo.
-            Placement context: ${target.promptContext}.
-            Requirements: The character must look like a 3D asset perfectly integrated with correct lighting, shadows, and depth (occlusion).
-            Final Output: The modified image.`,
-          },
-        ],
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: "3:4",
-        },
-      },
+    console.log("🌐 [Gemini] Envoi du fetch → /api/gemini.php");
+
+    const response = await fetch("/api/gemini.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64Image, target }),
     });
 
+    console.log("📥 [Gemini] Réponse brute reçue :", response);
+
+    const rawText = await response.text();
+    console.log(
+      "📄 [Gemini] Contenu brut reçu :",
+      rawText.slice(0, 200),
+      "..."
+    );
+
+    // 🔍 Vérifie si le backend a renvoyé du HTML au lieu de JSON
+    if (!response.ok) {
+      console.error("❌ [Gemini] Statut HTTP non OK :", response.status);
+      throw new Error("Erreur backend IA : statut HTTP " + response.status);
+    }
+
+    if (rawText.trim().startsWith("<")) {
+      console.error("❌ [Gemini] Le backend renvoie du HTML :", rawText);
+      throw new Error("Erreur backend IA : contenu HTML reçu");
+    }
+
+    console.log("🔍 [Gemini] Tentative de parse JSON…");
+
+    const data = JSON.parse(rawText);
+    console.log("✅ [Gemini] JSON parsé :", data);
+
+    const candidate = data.candidates?.[0];
     let processedImageBase64 = "";
     let generatedQuote = "";
 
-    // Extraction de l'image et du texte
-    const candidate = response.candidates?.[0];
     if (candidate?.content?.parts) {
+      console.log(
+        "🧩 [Gemini] Parts trouvées :",
+        candidate.content.parts.length
+      );
+
       for (const part of candidate.content.parts) {
-        if (part.inlineData) {
-          processedImageBase64 = part.inlineData.data || "";
+        if (part.inlineData?.data) {
+          console.log("🖼️ [Gemini] Image traitée trouvée");
+          processedImageBase64 = part.inlineData.data;
         } else if (part.text) {
+          console.log("💬 [Gemini] Texte trouvé :", part.text);
           generatedQuote = part.text.trim();
         }
       }
+    } else {
+      console.warn("⚠️ [Gemini] Aucun candidate.content.parts trouvé");
     }
 
     if (!processedImageBase64) {
-      throw new Error(
-        "Le modèle n'a pas renvoyé d'image traitée (vérifiez vos quotas)."
-      );
+      console.error("❌ [Gemini] Aucune image traitée renvoyée");
+      throw new Error("Le modèle n'a pas renvoyé d'image traitée.");
     }
 
-    // 2. Génération d'une citation si absente
     if (!generatedQuote || generatedQuote.length < 5) {
-      try {
-        const textResponse = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: `Tu incarnes ${target.characterName}. Dis une phrase courte (max 10 mots) et magique pour saluer le visiteur.`,
-        });
-
-        generatedQuote =
-          textResponse.text || "La magie est partout autour de vous !";
-      } catch {
-        generatedQuote = "Salut ! Content de te rencontrer ici !";
-      }
+      console.warn("⚠️ [Gemini] Citation vide → fallback");
+      generatedQuote = "Bienvenue au parc ToonHunter !";
     }
+
+    console.log("🎉 [Gemini] Succès → image + quote renvoyées");
 
     return {
       image: processedImageBase64,
       quote: generatedQuote,
     };
   } catch (error: any) {
-    console.error("[Gemini Service Exception]:", error);
-
-    if (error.message?.includes("429") || error.status === 429) {
-      throw new Error(
-        "Quota d'IA épuisé (Erreur 429). Le parc a atteint sa limite de magie gratuite pour aujourd'hui."
-      );
-    }
-
-    throw error;
+    console.error("🔥 [Gemini] ERREUR CAPTURE :", error);
+    throw new Error("Erreur IA : " + error.message);
   }
 };
 

@@ -18,3 +18,11 @@ api/.env
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Mode Débogage
+usbStarted.tx
+
+# API GEMINI
+gen-lang-client-0774329877-3fe700b41a3a.json
+192.168.1.98+3-key.pem
+192.168.1.98+3.pem

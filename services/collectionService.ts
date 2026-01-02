@@ -17,6 +17,7 @@ export const collectionService = {
         `${API_CONFIG.BASE_URL}/collection.php?user_id=${userId}`
       );
       const data = await response.json();
+
       return data.collection || {};
     } catch (e) {
       console.error("Erreur collection API:", e);
@@ -27,29 +28,37 @@ export const collectionService = {
   addTrophy: async (
     userId: string | number,
     locationId: string | number,
-    photoUrl: string, // base64 envoyé ici
+    photoBase64: string,
     quote: string
-  ): Promise<string | null> => {
+  ): Promise<CollectionItem | null> => {
     if (API_CONFIG.USE_MOCK_DATA) {
       const current = await collectionService.getUserCollection(userId);
-      current[locationId] = {
+      const item: CollectionItem = {
         locationId,
-        photoUrl,
+        photoUrl: photoBase64,
         quote,
         capturedAt: new Date().toISOString(),
       };
+      current[locationId] = item;
+
       localStorage.setItem(
         `${MOCK_COLLECTION_KEY}_${userId}`,
         JSON.stringify(current)
       );
-      return photoUrl;
+
+      return item;
     }
 
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}/collection.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, locationId, photoUrl, quote }),
+        body: JSON.stringify({
+          userId,
+          locationId,
+          photoUrl: photoBase64,
+          quote,
+        }),
       });
 
       const data = await response.json();
@@ -59,8 +68,8 @@ export const collectionService = {
         return null;
       }
 
-      // Le backend renvoie l’URL publique du fichier
-      return data.photoUrl || null;
+      // Le backend renvoie maintenant l'objet complet
+      return data.item || null;
     } catch (e) {
       console.error("Erreur addTrophy:", e);
       return null;
@@ -81,6 +90,6 @@ export const collectionService = {
       return;
     }
 
-    // TODO: ajouter suppression côté backend si nécessaire
+    // TODO: suppression backend si besoin
   },
 };

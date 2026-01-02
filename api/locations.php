@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // GET : récupérer toutes les locations
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    error_log(">>> [Location] GET reçu");
 
     try {
         $stmt = $pdo->query("SELECT * FROM locations");
@@ -39,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
         $loc['radiusMeters'] = isset($loc['radiusMeters']) ? (int)$loc['radiusMeters'] : 0;
     }
+    error_log(">>> [Location] GET terminé, " . count($locations) . " lieux renvoyés");
 
     echo json_encode(["success" => true, "locations" => $locations]);
     return;

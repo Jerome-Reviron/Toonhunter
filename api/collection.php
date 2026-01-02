@@ -6,26 +6,11 @@ require_once __DIR__ . "/db.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
-$uploadDir = rtrim(__DIR__, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . "uploads";
-$publicPath = "/api/uploads/";
-
-// Debug
-error_log("UPLOAD DIR = " . $uploadDir);
-
-// Créer le dossier si nécessaire
-if (!file_exists($uploadDir)) {
-    if (!mkdir($uploadDir, 0777, true)) {
-        error_log("Impossible de créer le dossier uploads: " . $uploadDir);
-        http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Erreur serveur: impossible de créer le dossier uploads."]);
-        exit;
-    }
-}
-
 // ---------------------------------------------------------
 // GET : récupérer la collection d’un utilisateur
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    error_log(">>> [Collection] Requête reçue");
 
     $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
 
@@ -49,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $collection = [];
     foreach ($items as $item) {
         $collection[$item['locationId']] = [
+            "id"         => $item['id'],
+            "userId"     => $item['userId'],
             "locationId" => $item['locationId'],
             "photoUrl"   => $item['photoUrl'],
             "quote"      => $item['quote'],
@@ -56,13 +43,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
     }
 
+    error_log(">>> [Collection] Réponse envoyée");
+
     echo json_encode(["success" => true, "collection" => $collection]);
     return;
 }
 
 
 // ---------------------------------------------------------
-// POST : ajouter un trophée (avec sauvegarde fichier)
+// POST : ajouter un trophée (stockage base64 en BDD)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -75,10 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
-    $userId     = (int)($data->userId ?? 0);
-    $locationId = (int)($data->locationId ?? 0);
+    $userId      = (int)($data->userId ?? 0);
+    $locationId  = (int)($data->locationId ?? 0);
     $photoBase64 = $data->photoUrl ?? '';
-    $quote      = trim($data->quote ?? '');
+    $quote       = trim($data->quote ?? '');
 
     if ($userId <= 0 || $locationId <= 0 || $photoBase64 === '') {
         http_response_code(400);
@@ -86,26 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
-    // Extraction du base64
+    // Nettoyage éventuel du base64
     if (strpos($photoBase64, "base64,") !== false) {
         $photoBase64 = explode("base64,", $photoBase64)[1];
     }
-
-    $imageData = base64_decode($photoBase64);
-
-    if (!$imageData) {
-        http_response_code(400);
-        echo json_encode(["success" => false, "message" => "Image invalide."]);
-        return;
-    }
-
-    // Nom unique
-    $fileName = "user_{$userId}_loc_{$locationId}_" . time() . ".jpg";
-    $filePath = $uploadDir . $fileName;
-    $publicUrl = $publicPath . $fileName;
-
-    // Sauvegarde du fichier
-    file_put_contents($filePath, $imageData);
 
     try {
         $stmt = $pdo->prepare("
@@ -120,9 +93,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             ':userId'     => $userId,
             ':locationId' => $locationId,
-            ':photoUrl'   => $publicUrl,
+            ':photoUrl'   => $photoBase64,
             ':quote'      => $quote
         ]);
+
+        // Récupérer la ligne fraîchement insérée/mise à jour
+        $stmt2 = $pdo->prepare("SELECT * FROM collection WHERE userId = :userId AND locationId = :locationId");
+        $stmt2->execute([
+            ':userId' => $userId,
+            ':locationId' => $locationId
+        ]);
+        $item = $stmt2->fetch();
+
     } catch (PDOException $e) {
         error_log("Erreur SQL POST collection: " . $e->getMessage());
         http_response_code(500);
@@ -130,7 +112,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
-    echo json_encode(["success" => true, "photoUrl" => $publicUrl]);
+    echo json_encode([
+        "success" => true,
+        "item" => [
+            "id"         => $item['id'],
+            "userId"     => $item['userId'],
+            "locationId" => $item['locationId'],
+            "photoUrl"   => $item['photoUrl'],
+            "quote"      => $item['quote'],
+            "capturedAt" => $item['capturedAt'],
+        ]
+    ]);
     return;
 }
 
