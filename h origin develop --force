@@ -1,0 +1,442 @@
+[33mcommit 81108d3284300706ceeae7c7edb3d88423744aa8[m[33m ([m[1;36mHEAD -> [m[1;32mdevelop[m[33m)[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Sat Jan 3 00:40:47 2026 +0100
+
+    API en place est fonctionnelle
+
+ 192.168.1.98+3-key.pem                           | 28 [31m------------------------[m
+ 192.168.1.98+3.pem                               | 26 [31m----------------------[m
+ api/gen-lang-client-0774329877-3fe700b41a3a.json | 13 [31m-----------[m
+ 3 files changed, 67 deletions(-)
+
+[33mcommit 25e2dde1db2293ffdcc80a8bc6a045b252942f53[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Sat Jan 3 00:25:46 2026 +0100
+
+    API en place est fonctionnelle
+
+ .gitignore                                       |   8 [32m+[m
+ .vscode/settings.json                            |   3 [32m+[m
+ 192.168.1.98+3-key.pem                           |  28 [32m+++[m
+ 192.168.1.98+3.pem                               |  26 [32m+++[m
+ App.tsx                                          |  90 [32m++++++++[m[31m--[m
+ api/collection.php                               |  70 [32m++++[m[31m----[m
+ api/gemini.php                                   | 218 [32m+++++++++++++++++++++++[m
+ api/gen-lang-client-0774329877-3fe700b41a3a.json |  13 [32m++[m
+ api/locations.php                                |   2 [32m+[m
+ api/uploads                                      |   0
+ api/uploadsuser_1_loc_1_1767360825.jpg           | Bin [31m0[m -> [32m2020820[m bytes
+ components/LocationCard.tsx                      |   2 [32m+[m[31m-[m
+ index.html                                       |   1 [32m+[m
+ package-lock.json                                |   1 [31m-[m
+ package.json                                     |   1 [31m-[m
+ public/favicon.png                               | Bin [31m0[m -> [32m193021[m bytes
+ services/collectionService.ts                    |  27 [32m++[m[31m-[m
+ services/geminiService.ts                        | 128 [32m++++++[m[31m-------[m
+ usbStarted.txt                                   | 118 [32m++++++++++++[m
+ vite.config.ts                                   |  17 [32m+[m[31m-[m
+ 20 files changed, 605 insertions(+), 148 deletions(-)
+
+[33mcommit 96bd3d36c6321acdee595f529d641afd8c70d3d6[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/develop[m[33m, [m[1;32mmain[m[33m)[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Tue Dec 30 23:50:53 2025 +0100
+
+    Mise en place flux photo mobile au lieu du flux video
+
+ App.tsx                        | 133 [32m++++++++++++++++++++[m[31m------------[m
+ components/CameraInterface.tsx | 169 [31m-----------------------------------------[m
+ types.ts                       |   1 [31m-[m
+ 3 files changed, 85 insertions(+), 218 deletions(-)
+
+[33mcommit 795b256f03ccf9a5b150d3491a1887e809c1b4f0[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Tue Dec 30 14:27:45 2025 +0100
+
+    Colorisation rayon scan et toons proches
+
+ App.tsx | 4 [32m++[m[31m--[m
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+[33mcommit ea22201fcdc70fb515f8675728287ae828cda2b4[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Tue Dec 30 14:16:26 2025 +0100
+
+    Mise en place animation d'accueil
+
+ App.tsx                                  |  47 [32m+++++++++++++++++++++++++++++[m[31m--[m
+ components/LocationCard.tsx              |  24 [32m+++++++++++++[m[31m---[m
+ components/SplashScreen/SplashScreen.tsx |  14 [32m+++++++++[m
+ components/SplashScreen/splash.css       |  45 [32m+++++++++++++++++++++++++++++[m
+ public/Toonhunter-logo.png               | Bin [31m0[m -> [32m193021[m bytes
+ types.ts                                 |   1 [32m+[m
+ 6 files changed, 124 insertions(+), 7 deletions(-)
+
+[33mcommit 532f2cf822da7a83809f226b5a7f43f5baac2f6f[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Mon Dec 29 16:58:52 2025 +0100
+
+    Mise en place API development et API production
+
+ .gitignore                                         |    4 [32m+[m[31m-[m
+ api/collection.php                                 |   94 [32m+[m[31m-[m
+ api/composer.json                                  |    3 [32m+[m[31m-[m
+ api/composer.lock                                  |  475 [32m++++++[m[31m-[m
+ api/cors.php                                       |   39 [32m+[m
+ api/db.php                                         |   58 [32m+[m[31m-[m
+ api/uploads                                        |    0
+ api/vendor/composer/autoload_classmap.php          |    5 [32m+[m
+ api/vendor/composer/autoload_files.php             |   12 [32m+[m
+ api/vendor/composer/autoload_psr4.php              |    6 [32m+[m
+ api/vendor/composer/autoload_real.php              |   19 [32m+[m
+ api/vendor/composer/autoload_static.php            |   50 [32m+[m
+ api/vendor/composer/installed.json                 |  491 [32m+++++++[m
+ api/vendor/composer/installed.php                  |   58 [32m+[m[31m-[m
+ api/vendor/composer/platform_check.php             |    4 [32m+[m[31m-[m
+ api/vendor/graham-campbell/result-type/LICENSE     |   21 [32m+[m
+ .../graham-campbell/result-type/composer.json      |   33 [32m+[m
+ .../graham-campbell/result-type/src/Error.php      |  121 [32m++[m
+ .../graham-campbell/result-type/src/Result.php     |   69 [32m+[m
+ .../graham-campbell/result-type/src/Success.php    |  120 [32m++[m
+ api/vendor/phpoption/phpoption/LICENSE             |  201 [32m+++[m
+ api/vendor/phpoption/phpoption/composer.json       |   50 [32m+[m
+ .../phpoption/src/PhpOption/LazyOption.php         |  175 [32m+++[m
+ .../phpoption/phpoption/src/PhpOption/None.php     |  136 [32m++[m
+ .../phpoption/phpoption/src/PhpOption/Option.php   |  434 [32m++++++[m
+ .../phpoption/phpoption/src/PhpOption/Some.php     |  169 [32m+++[m
+ api/vendor/symfony/polyfill-ctype/Ctype.php        |  232 [32m+++[m
+ api/vendor/symfony/polyfill-ctype/LICENSE          |   19 [32m+[m
+ api/vendor/symfony/polyfill-ctype/README.md        |   12 [32m+[m
+ api/vendor/symfony/polyfill-ctype/bootstrap.php    |   50 [32m+[m
+ api/vendor/symfony/polyfill-ctype/bootstrap80.php  |   46 [32m+[m
+ api/vendor/symfony/polyfill-ctype/composer.json    |   38 [32m+[m
+ api/vendor/symfony/polyfill-mbstring/LICENSE       |   19 [32m+[m
+ api/vendor/symfony/polyfill-mbstring/Mbstring.php  | 1045 [32m++++++++++++++[m
+ api/vendor/symfony/polyfill-mbstring/README.md     |   13 [32m+[m
+ .../Resources/unidata/caseFolding.php              |  119 [32m++[m
+ .../Resources/unidata/lowerCase.php                | 1397 [32m++++++++++++++++++[m
+ .../Resources/unidata/titleCaseRegexp.php          |    5 [32m+[m
+ .../Resources/unidata/upperCase.php                | 1489 [32m++++++++++++++++++++[m
+ api/vendor/symfony/polyfill-mbstring/bootstrap.php |  172 [32m+++[m
+ .../symfony/polyfill-mbstring/bootstrap80.php      |  167 [32m+++[m
+ api/vendor/symfony/polyfill-mbstring/composer.json |   39 [32m+[m
+ api/vendor/symfony/polyfill-php80/LICENSE          |   19 [32m+[m
+ api/vendor/symfony/polyfill-php80/Php80.php        |  115 [32m++[m
+ api/vendor/symfony/polyfill-php80/PhpToken.php     |  106 [32m++[m
+ api/vendor/symfony/polyfill-php80/README.md        |   25 [32m+[m
+ .../polyfill-php80/Resources/stubs/Attribute.php   |   31 [32m+[m
+ .../polyfill-php80/Resources/stubs/PhpToken.php    |   16 [32m+[m
+ .../polyfill-php80/Resources/stubs/Stringable.php  |   20 [32m+[m
+ .../Resources/stubs/UnhandledMatchError.php        |   16 [32m+[m
+ .../polyfill-php80/Resources/stubs/ValueError.php  |   16 [32m+[m
+ api/vendor/symfony/polyfill-php80/bootstrap.php    |   42 [32m+[m
+ api/vendor/symfony/polyfill-php80/composer.json    |   37 [32m+[m
+ api/vendor/vlucas/phpdotenv/LICENSE                |   30 [32m+[m
+ api/vendor/vlucas/phpdotenv/composer.json          |   60 [32m+[m
+ api/vendor/vlucas/phpdotenv/src/Dotenv.php         |  267 [32m++++[m
+ .../phpdotenv/src/Exception/ExceptionInterface.php |   12 [32m+[m
+ .../src/Exception/InvalidEncodingException.php     |   12 [32m+[m
+ .../src/Exception/InvalidFileException.php         |   12 [32m+[m
+ .../src/Exception/InvalidPathException.php         |   12 [32m+[m
+ .../src/Exception/ValidationException.php          |   12 [32m+[m
+ api/vendor/vlucas/phpdotenv/src/Loader/Loader.php  |   48 [32m+[m
+ .../phpdotenv/src/Loader/LoaderInterface.php       |   20 [32m+[m
+ .../vlucas/phpdotenv/src/Loader/Resolver.php       |   65 [32m+[m
+ api/vendor/vlucas/phpdotenv/src/Parser/Entry.php   |   59 [32m+[m
+ .../vlucas/phpdotenv/src/Parser/EntryParser.php    |  299 [32m++++[m
+ api/vendor/vlucas/phpdotenv/src/Parser/Lexer.php   |   58 [32m+[m
+ api/vendor/vlucas/phpdotenv/src/Parser/Lines.php   |  127 [32m++[m
+ api/vendor/vlucas/phpdotenv/src/Parser/Parser.php  |   53 [32m+[m
+ .../phpdotenv/src/Parser/ParserInterface.php       |   19 [32m+[m
+ api/vendor/vlucas/phpdotenv/src/Parser/Value.php   |   88 [32m++[m
+ .../src/Repository/Adapter/AdapterInterface.php    |   15 [32m+[m
+ .../src/Repository/Adapter/ApacheAdapter.php       |   89 [32m++[m
+ .../src/Repository/Adapter/ArrayAdapter.php        |   80 [32m++[m
+ .../src/Repository/Adapter/EnvConstAdapter.php     |   88 [32m++[m
+ .../src/Repository/Adapter/GuardedWriter.php       |   85 [32m++[m
+ .../src/Repository/Adapter/ImmutableWriter.php     |  110 [32m++[m
+ .../src/Repository/Adapter/MultiReader.php         |   48 [32m+[m
+ .../src/Repository/Adapter/MultiWriter.php         |   64 [32m+[m
+ .../src/Repository/Adapter/PutenvAdapter.php       |   91 [32m++[m
+ .../src/Repository/Adapter/ReaderInterface.php     |   17 [32m+[m
+ .../src/Repository/Adapter/ReplacingWriter.php     |  104 [32m++[m
+ .../src/Repository/Adapter/ServerConstAdapter.php  |   88 [32m++[m
+ .../src/Repository/Adapter/WriterInterface.php     |   27 [32m+[m
+ .../phpdotenv/src/Repository/AdapterRepository.php |  107 [32m++[m
+ .../phpdotenv/src/Repository/RepositoryBuilder.php |  272 [32m++++[m
+ .../src/Repository/RepositoryInterface.php         |   51 [32m+[m
+ .../vlucas/phpdotenv/src/Store/File/Paths.php      |   44 [32m+[m
+ .../vlucas/phpdotenv/src/Store/File/Reader.php     |   81 [32m++[m
+ .../vlucas/phpdotenv/src/Store/FileStore.php       |   72 [32m+[m
+ .../vlucas/phpdotenv/src/Store/StoreBuilder.php    |  141 [32m++[m
+ .../vlucas/phpdotenv/src/Store/StoreInterface.php  |   17 [32m+[m
+ .../vlucas/phpdotenv/src/Store/StringStore.php     |   37 [32m+[m
+ api/vendor/vlucas/phpdotenv/src/Util/Regex.php     |  112 [32m++[m
+ api/vendor/vlucas/phpdotenv/src/Util/Str.php       |  108 [32m++[m
+ api/vendor/vlucas/phpdotenv/src/Validator.php      |  207 [32m+++[m
+ services/collectionService.ts                      |   34 [32m+[m[31m-[m
+ services/geminiService.ts                          |   51 [32m+[m[31m-[m
+ 98 files changed, 11508 insertions(+), 137 deletions(-)
+
+[33mcommit b35757c1e374d9f434487fd5e6b7c1d8a11d786b[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Sun Dec 28 23:03:02 2025 +0100
+
+    Correctif UI
+
+ App.tsx                     |  15 [32m+[m[31m-[m
+ components/AdminPanel.tsx   | 458 [32m++++++++++++++++++++++++++++++++++[m[31m----------[m
+ components/LocationCard.tsx |   7 [32m+[m[31m-[m
+ 3 files changed, 373 insertions(+), 107 deletions(-)
+
+[33mcommit a3bd5e4dff64fc9f080250d84ee3884ee94bf33f[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Sun Dec 28 20:03:39 2025 +0100
+
+    Correction vite.config.ts
+
+ vite.config.ts | 52 [32m+[m[31m---------------------------------------------------[m
+ 1 file changed, 1 insertion(+), 51 deletions(-)
+
+[33mcommit 2c3a747b5cc434b94beb8310bd308dc79a607395[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Sun Dec 28 19:44:17 2025 +0100
+
+    Mise en place du https local pour PC et Mobile
+
+ api/collection.php          |   2 [32m+[m[31m-[m
+ api/cors.php                |  12 [32m++[m
+ api/forgot-password.php     |   1 [32m+[m
+ api/locations.php           | 140 [32m+++++++++++++++[m[31m-----[m
+ api/login.php               |   1 [32m+[m
+ api/register.php            |   1 [32m+[m
+ api/reset-password.php      |   1 [32m+[m
+ api/test-mail.php           |   1 [32m+[m
+ api/verify-reset-code.php   |   1 [32m+[m
+ config.ts                   |  28 [32m+++[m[31m-[m
+ constants.ts                |  19 [32m+++[m
+ localhost-key.pem           |  28 [32m++++[m
+ localhost.pem               |  26 [32m++++[m
+ package-lock.json           | 315 [32m+++++++++++++++++++++++++++++++++++++++++++[m[31m-[m
+ package.json                |  11 [32m+[m[31m-[m
+ services/locationService.ts |  52 [32m+++++++[m[31m-[m
+ vite.config.ts              |  77 [32m++++++++++[m[31m-[m
+ 17 files changed, 661 insertions(+), 55 deletions(-)
+
+[33mcommit 481a42b72bc449ee72048e2c58e2b265587c670e[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Fri Dec 26 20:10:43 2025 +0100
+
+    Mise en place du mot de passe oublié en local et pré prod
+
+ api/composer.json                                  |    5 [32m+[m
+ api/composer.lock                                  |  101 [32m+[m
+ api/forgot-password.php                            |  116 [32m+[m
+ api/reset-password.php                             |   76 [32m+[m
+ api/test-mail.php                                  |    8 [32m+[m
+ api/vendor/autoload.php                            |   12 [32m+[m
+ api/vendor/composer/ClassLoader.php                |  572 [32m++[m
+ api/vendor/composer/InstalledVersions.php          |  352 [32m++[m
+ api/vendor/composer/LICENSE                        |   21 [32m+[m
+ api/vendor/composer/autoload_classmap.php          |   10 [32m+[m
+ api/vendor/composer/autoload_namespaces.php        |    9 [32m+[m
+ api/vendor/composer/autoload_psr4.php              |   10 [32m+[m
+ api/vendor/composer/autoload_real.php              |   38 [32m+[m
+ api/vendor/composer/autoload_static.php            |   36 [32m+[m
+ api/vendor/composer/installed.json                 |   91 [32m+[m
+ api/vendor/composer/installed.php                  |   32 [32m+[m
+ api/vendor/composer/platform_check.php             |   26 [32m+[m
+ api/vendor/phpmailer/phpmailer/COMMITMENT          |   46 [32m+[m
+ api/vendor/phpmailer/phpmailer/LICENSE             |  502 [32m++[m
+ api/vendor/phpmailer/phpmailer/README.md           |  232 [32m+[m
+ api/vendor/phpmailer/phpmailer/SECURITY.md         |   37 [32m+[m
+ api/vendor/phpmailer/phpmailer/SMTPUTF8.md         |   48 [32m+[m
+ api/vendor/phpmailer/phpmailer/VERSION             |    1 [32m+[m
+ api/vendor/phpmailer/phpmailer/composer.json       |   84 [32m+[m
+ api/vendor/phpmailer/phpmailer/get_oauth_token.php |  182 [32m+[m
+ .../phpmailer/language/phpmailer.lang-af.php       |   26 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ar.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-as.php       |   35 [32m+[m
+ .../phpmailer/language/phpmailer.lang-az.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ba.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-be.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-bg.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-bn.php       |   35 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ca.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-cs.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-da.php       |   39 [32m+[m
+ .../phpmailer/language/phpmailer.lang-de.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-el.php       |   33 [32m+[m
+ .../phpmailer/language/phpmailer.lang-eo.php       |   37 [32m+[m
+ .../phpmailer/language/phpmailer.lang-es.php       |   38 [32m+[m
+ .../phpmailer/language/phpmailer.lang-et.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-fa.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-fi.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-fo.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-fr.php       |   36 [32m+[m
+ .../phpmailer/language/phpmailer.lang-gl.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-he.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-hi.php       |   35 [32m+[m
+ .../phpmailer/language/phpmailer.lang-hr.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-hu.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-hy.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-id.php       |   31 [32m+[m
+ .../phpmailer/language/phpmailer.lang-it.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ja.php       |   37 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ka.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ko.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ku.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-lt.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-lv.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-mg.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-mn.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ms.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-nb.php       |   37 [32m+[m
+ .../phpmailer/language/phpmailer.lang-nl.php       |   38 [32m+[m
+ .../phpmailer/language/phpmailer.lang-pl.php       |   33 [32m+[m
+ .../phpmailer/language/phpmailer.lang-pt.php       |   34 [32m+[m
+ .../phpmailer/language/phpmailer.lang-pt_br.php    |   38 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ro.php       |   33 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ru.php       |   36 [32m+[m
+ .../phpmailer/language/phpmailer.lang-si.php       |   34 [32m+[m
+ .../phpmailer/language/phpmailer.lang-sk.php       |   30 [32m+[m
+ .../phpmailer/language/phpmailer.lang-sl.php       |   36 [32m+[m
+ .../phpmailer/language/phpmailer.lang-sr.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-sr_latn.php  |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-sv.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-tl.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-tr.php       |   38 [32m+[m
+ .../phpmailer/language/phpmailer.lang-uk.php       |   28 [32m+[m
+ .../phpmailer/language/phpmailer.lang-ur.php       |   30 [32m+[m
+ .../phpmailer/language/phpmailer.lang-vi.php       |   27 [32m+[m
+ .../phpmailer/language/phpmailer.lang-zh.php       |   29 [32m+[m
+ .../phpmailer/language/phpmailer.lang-zh_cn.php    |   36 [32m+[m
+ .../phpmailer/phpmailer/src/DSNConfigurator.php    |  245 [32m+[m
+ api/vendor/phpmailer/phpmailer/src/Exception.php   |   40 [32m+[m
+ api/vendor/phpmailer/phpmailer/src/OAuth.php       |  139 [32m+[m
+ .../phpmailer/phpmailer/src/OAuthTokenProvider.php |   44 [32m+[m
+ api/vendor/phpmailer/phpmailer/src/PHPMailer.php   | 5476 [32m++++++++++++++++++++[m
+ api/vendor/phpmailer/phpmailer/src/POP3.php        |  470 [32m++[m
+ api/vendor/phpmailer/phpmailer/src/SMTP.php        | 1597 [32m++++++[m
+ api/verify-reset-code.php                          |   63 [32m+[m
+ services/authService.ts                            |   69 [32m+[m[31m-[m
+ 91 files changed, 12524 insertions(+), 3 deletions(-)
+
+[33mcommit 0da25d774535de96c7c05f7669e5b8044a3fec8d[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 23:35:13 2025 +0100
+
+    Point gps précis
+
+ App.tsx                     | 144 [32m++++++++++++++++++++++++++++++++[m[31m------------[m
+ components/AuthScreen.tsx   |  86 [32m++++++++++++++++++++++[m[31m----[m
+ components/LocationCard.tsx |  45 [32m++++++++++[m[31m----[m
+ 3 files changed, 211 insertions(+), 64 deletions(-)
+
+[33mcommit 6bd2e5ffac6b2d62e7367515862973fdee9051fd[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 21:48:43 2025 +0100
+
+    Unification des codes et ajout de sécurité importante sur les fichiers php
+
+ .gitignore         |   2 [32m+[m
+ api/collection.php | 124 [32m++++++++++++++++++++++++++++++++++++++++++++++[m
+ api/db.php         | 109 [32m++++++++++++++++++++++++++++++++++++++++[m
+ api/locations.php  | 142 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ api/login.php      |  89 [32m+++++++++++++++++++++++++++++++++[m
+ api/register.php   | 103 [32m++++++++++++++++++++++++++++++++++++++[m
+ config.ts          |   7 [32m++[m[31m-[m
+ database.sql       |   0
+ 8 files changed, 572 insertions(+), 4 deletions(-)
+
+[33mcommit e84041ba9bd84e3e72829e8c6d3dc46d9a1c87d1[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 18:11:07 2025 +0100
+
+    Connexion grace à Toonhunter_API ok
+
+ components/AuthScreen.tsx | 16 [32m+++[m[31m--------[m
+ config.ts                 |  9 [32m+++[m[31m---[m
+ services/authService.ts   | 70 [32m+++++++++++++++++++++++++++[m[31m--------------------[m
+ 3 files changed, 49 insertions(+), 46 deletions(-)
+
+[33mcommit fca32e33757001117aebf44d8e65db4fa0ae39a9[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 15:26:25 2025 +0100
+
+    Ajout message erreur quota api épuisé
+
+ App.tsx                   | 80 [32m++++++++++++++++++++++++++++++++++++++[m[31m---------[m
+ services/geminiService.ts | 64 [32m++++++++++++++++++++++++++[m[31m-----------[m
+ 2 files changed, 111 insertions(+), 33 deletions(-)
+
+[33mcommit 2de33b088b39a10a8ceba1ad174cdf8a96722b21[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 14:06:44 2025 +0100
+
+    Ajout .env et clé API
+
+ App.tsx                   | 471 [32m++++++++++++++++++++++++++++++++[m[31m--------------[m
+ package.json              |   2 [32m+[m[31m-[m
+ services/geminiService.ts |  84 [32m+++++[m[31m----[m
+ vite.config.ts            |  25 [32m++[m[31m-[m
+ 4 files changed, 390 insertions(+), 192 deletions(-)
+
+[33mcommit 165a8e756e78982b287bf2049ac0634d5b48b0cb[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 12:57:10 2025 +0100
+
+    Ajout package.json et vite.config.ts
+
+ index.html        |   14 [32m+[m[31m-[m
+ package-lock.json | 2410 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ package.json      |   25 [32m+[m
+ vite.config.ts    |   11 [32m+[m
+ 4 files changed, 2455 insertions(+), 5 deletions(-)
+
+[33mcommit e842c448ca951cabe8347e98fe009d2616e52b09[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 11:51:33 2025 +0100
+
+    MAJ README avec les commandes terminal
+
+ README.md | 55 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++[m[31m----[m
+ 1 file changed, 51 insertions(+), 4 deletions(-)
+
+[33mcommit e00150e26ba780e24096245c902d0e4a6c9b5bc0[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 11:42:44 2025 +0100
+
+    Description de mon changement
+
+ README.md | 17 [32m++++++++++++++[m[31m---[m
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+[33mcommit 784a4eac68424fa2a12b8b488c4e4b0db9e6291d[m
+Author: JR <jrinstitut63@hotmail.fr>
+Date:   Thu Dec 25 11:26:08 2025 +0100
+
+    Initial commit: ToonHunter AR App
+
+ .gitignore                     |  18 [32m++[m
+ App.tsx                        | 324 [32m+++++++++++++++++++++++++++++[m
+ README.md                      |  35 [32m++++[m
+ api/collection.php             |   0
+ api/db.php                     |   0
+ api/locations.php              |   0
+ api/login.php                  |   0
+ components/AdminPanel.tsx      | 277 [32m+++++++++++++++++++++++++[m
+ components/AuthScreen.tsx      | 454 [32m+++++++++++++++++++++++++++++++++++++++++[m
+ components/CameraInterface.tsx | 169 [32m+++++++++++++++[m
+ components/LocationCard.tsx    | 163 [32m+++++++++++++++[m
+ config.ts                      |   9 [32m+[m
+ constants.ts                   |  65 [32m++++++[m
+ database.sql                   |   0
+ index.html                     |  90 [32m++++++++[m
+ index.tsx                      |  15 [32m++[m
+ metadata.json                  |   5 [32m+[m
+ services/authService.ts        |  87 [32m++++++++[m
+ services/collectionService.ts  |  70 [32m+++++++[m
+ services/geminiService.ts      |  90 [32m++++++++[m
+ services/locationService.ts    |  47 [32m+++++[m
+ types.ts                       |  53 [32m+++++[m
+ 22 files changed, 1971 insertions(+)
