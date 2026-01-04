@@ -12,7 +12,7 @@ export const locationService = {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/locations.php`);
+      const response = await fetch("/api/locations.php");
       if (!response.ok) throw new Error("Erreur chargement lieux");
 
       const data = await response.json();
@@ -37,7 +37,7 @@ export const locationService = {
       return { ...location, id: Date.now().toString() };
     }
 
-    const response = await fetch(`${API_CONFIG.BASE_URL}/locations.php`, {
+    const response = await fetch("/api/locations.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(location),
@@ -58,7 +58,7 @@ export const locationService = {
   update: async (location: LocationTarget): Promise<LocationTarget> => {
     if (API_CONFIG.USE_MOCK_DATA) return location;
 
-    const response = await fetch(`${API_CONFIG.BASE_URL}/locations.php`, {
+    const response = await fetch("/api/locations.php", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(location),
@@ -79,12 +79,9 @@ export const locationService = {
   delete: async (id: string | number): Promise<void> => {
     if (API_CONFIG.USE_MOCK_DATA) return;
 
-    const response = await fetch(
-      `${API_CONFIG.BASE_URL}/locations.php?id=${id}`,
-      {
-        method: "DELETE",
-      }
-    );
+    const response = await fetch("/api/locations.php?id=${id}", {
+      method: "DELETE",
+    });
 
     const data = await response.json();
 

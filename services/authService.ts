@@ -25,7 +25,7 @@ export const authService = {
       return user;
     } else {
       try {
-        const response = await fetch(`${API_CONFIG.BASE_URL}/login.php`, {
+        const response = await fetch("/api/login.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -50,7 +50,7 @@ export const authService = {
     email: string,
     password: string
   ): Promise<void> => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/register.php`, {
+    const response = await fetch("/api/register.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pseudo, email, password }),
@@ -77,7 +77,7 @@ export const authService = {
   */
 
   requestPasswordReset: async (email: string): Promise<void> => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/forgot-password.php`, {
+    const response = await fetch("/api/forgot-password.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -104,8 +104,7 @@ export const authService = {
   */
 
   verifyResetCode: async (email: string, code: string): Promise<boolean> => {
-    const response = await fetch(
-      `${API_CONFIG.BASE_URL}/verify-reset-code.php`,
+    const response = await fetch("/api/verify-reset-code.php",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -140,7 +139,7 @@ export const authService = {
     code: string,
     password: string
   ): Promise<void> => {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/reset-password.php`, {
+    const response = await fetch("/api/reset-password.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, code, password }),

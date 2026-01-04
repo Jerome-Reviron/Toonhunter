@@ -6,21 +6,19 @@ header("Content-Type: application/json");
 // ---------------------------------------------------------
 // 0) Lecture du POST (UNE SEULE FOIS)
 // ---------------------------------------------------------
-$raw = file_get_contents("php://input");
-error_log(">>> [Gemini] RAW POST : " . $raw);
+$raw = file_get_contents("php://input"); 
+error_log(">>> [Gemini] RAW POST : " . $raw); 
 
-$data = json_decode($raw, true);
-error_log(">>> [Gemini] Requête reçue");
+$data = json_decode($raw, true); 
+error_log(">>> [Gemini] DATA DECODED : " . print_r($data, true)); 
 
-$imageBase64 = $data["image"] ?? null;
-$target = $data["target"] ?? null;
+$imageBase64 = $data["image"] ?? null; 
+$target = $data["target"] ?? null; 
 
-if (!$imageBase64 || !$target) {
-    error_log(">>> [Gemini] ERREUR : image ou target manquante");
-    http_response_code(400);
-    echo json_encode(["error" => "Image ou cible manquante"]);
-    exit;
-}
+if (!$imageBase64 || !$target) { error_log(">>> [Gemini] ERREUR : image ou target manquante"); 
+    http_response_code(400); 
+    echo json_encode(["error" => "Image ou cible manquante"]); 
+exit; }
 
 error_log(">>> [Gemini] Image reçue (taille base64) : " . strlen($imageBase64));
 
@@ -39,6 +37,44 @@ $credentials = json_decode(file_get_contents($credentialsPath), true);
 function base64url_encode($data) {
     return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 }
+
+function compressBase64Image($base64, $maxWidth = 1024, $quality = 75) {
+    // 1. Décoder le base64
+    $imageData = base64_decode($base64);
+    $source = imagecreatefromstring($imageData);
+
+    if (!$source) {
+        error_log(">>> [Gemini] ERREUR : impossible de décoder l'image pour compression");
+        return $base64; // fallback
+    }
+
+    // 2. Dimensions originales
+    $width = imagesx($source);
+    $height = imagesy($source);
+
+    // 3. Calcul du redimensionnement
+    if ($width > $maxWidth) {
+        $ratio = $maxWidth / $width;
+        $newWidth = $maxWidth;
+        $newHeight = intval($height * $ratio);
+    } else {
+        $newWidth = $width;
+        $newHeight = $height;
+    }
+
+    // 4. Redimensionnement
+    $resized = imagecreatetruecolor($newWidth, $newHeight);
+    imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+    // 5. Compression JPEG
+    ob_start();
+    imagejpeg($resized, null, $quality);
+    $compressedData = ob_get_clean();
+
+    // 6. Ré-encodage base64
+    return base64_encode($compressedData);
+}
+
 
 // ---------------------------------------------------------
 // 2) Génération JWT
@@ -155,8 +191,9 @@ if ($httpCode !== 200) {
 // ---------------------------------------------------------
 // 7) Extraction image + texte
 // ---------------------------------------------------------
-$data = json_decode($response, true);
-$parts = $data["candidates"][0]["content"]["parts"] ?? [];
+$geminiData = json_decode($response, true);
+$parts = $geminiData["candidates"][0]["content"]["parts"] ?? [];
+
 
 $finalImage = "";
 $quote = "";
@@ -174,18 +211,27 @@ foreach ($parts as $p) {
 }
 
 if (!$quote) {
-    $quote = "Bienvenue au parc ToonHunter !";
+    $quote = "texte error par défaut !";
     error_log(">>> [Gemini] Aucune citation → fallback");
 }
 
 error_log(">>> [Gemini] FINAL IMAGE LENGTH = " . strlen($finalImage));
 
 // ---------------------------------------------------------
+// 7.5) Compression de l'image générée
+// ---------------------------------------------------------
+$compressedImage = compressBase64Image($finalImage, 1024, 75);
+error_log(">>> [Gemini] Compressed image size = " . strlen($compressedImage));
+
+// On remplace l'image finale par la version compressée
+$finalImage = $compressedImage;
+
+// ---------------------------------------------------------
 // 8) Insertion en base
 // ---------------------------------------------------------
 require_once __DIR__ . "/db.php";
 
-$userId = 1; // temporaire
+$userId = $data["userId"];
 $locationId = $target["id"];
 
 $stmt = $pdo->prepare("

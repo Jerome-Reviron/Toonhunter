@@ -1,24 +1,4 @@
 <?php
-/* 
-require_once 'db.php';
-
-$data = json_decode(file_get_contents("php://input"));
-
-if (!empty($data->email) && !empty($data->password)) {
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->execute([$data->email]);
-    $user = $stmt->fetch();
-
-    if ($user && password_verify($data->password, $user['password'])) {
-        unset($user['password']); // Sécurité : on ne renvoie pas le mot de passe
-        echo json_encode(["success" => true, "user" => $user]);
-    } else {
-        echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
-    }
-}
-*/
-
-
 // ---------------------------------------------------------
 // Version sécurisée et optimisée
 // ---------------------------------------------------------

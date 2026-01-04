@@ -237,40 +237,62 @@ const App: React.FC = () => {
   const handleCapture = async (base64Image: string) => {
     if (!selectedTarget) return;
 
-    // 👉 Stabilise l'état AVANT l'appel réseau
     setAppState(AppState.ANALYZING);
     await new Promise((resolve) => setTimeout(resolve, 10));
     setErrorMessage(null);
 
     try {
+      // 1) Appel Gemini → renvoie image BRUTE (déjà prefixée data:image/jpeg;base64,)
       const result = await generateCharacterPhoto(base64Image, selectedTarget);
-      const fullResultImage = `data:image/jpeg;base64,${result.image}`;
 
+      // 🖼️ Affichage anticipé immédiat
       setAnalysisResult({
         originalImage: `data:image/jpeg;base64,${base64Image}`,
-        processedImage: fullResultImage,
+        processedImage: result.image, // OK, déjà avec prefixe
         quote: result.quote,
       });
 
-      // 1) On enregistre dans la BDD et on récupère l’item complet
+      // On passe à l’écran RESULT immédiatement
+      setAppState(AppState.RESULT);
+
+      // 2) Enregistrement en BDD → on envoie l'image telle quelle
       const savedItem = await collectionService.addTrophy(
         user!.id,
         selectedTarget.id,
-        fullResultImage,
+        result.image, // on envoie l'image complète (avec data:image/...)
         result.quote
       );
 
-      if (savedItem) {
-        // 2) On met à jour la collection locale AVEC l’item renvoyé par le backend
-        setCollection((prev) => ({
-          ...prev,
-          [selectedTarget.id]: savedItem,
-        }));
-      }
+      if (!savedItem) throw new Error("Erreur sauvegarde");
 
-      setAppState(AppState.RESULT);
+      // 3) Mise à jour collection locale
+      setCollection((prev) => ({
+        ...prev,
+        [selectedTarget.id]: savedItem,
+      }));
+
+      // 4) Préchargement de l’image compressée avant remplacement
+      const img = new Image();
+      img.src = `data:image/jpeg;base64,${savedItem.photoUrl}`; // ← ICI : prefixe
+      img.onload = () => {
+        setAnalysisResult((prev) => {
+          if (!prev)
+            return {
+              originalImage: `data:image/jpeg;base64,${base64Image}`,
+              processedImage: `data:image/jpeg;base64,${savedItem.photoUrl}`,
+              quote: savedItem.quote,
+            };
+
+          return {
+            originalImage: prev.originalImage,
+            processedImage: `data:image/jpeg;base64,${savedItem.photoUrl}`, // ← ICI AUSSI
+            quote: savedItem.quote,
+          };
+        });
+      };
     } catch (error: any) {
       console.error("Capture Error:", error);
+
       let msg = "Une interférence magique empêche la matérialisation.";
       if (
         error.message?.includes("429") ||
@@ -278,6 +300,7 @@ const App: React.FC = () => {
       ) {
         msg = "La Magie est en panne. Veuillez réessayer dans un moment.";
       }
+
       setErrorMessage(msg);
       setAppState(AppState.ERROR);
     }

@@ -28,9 +28,10 @@ export default defineConfig(({ mode }) => {
       // 🔥 PROXY API — LA CLÉ POUR QUE LE TÉLÉPHONE FONCTIONNE
       proxy: {
         "/api": {
-          target: "https://192.168.1.98", // Backend Laragon
+          target: "http://localhost/toonhunter/api",
           changeOrigin: true,
-          secure: false, // Accepte le certificat mkcert
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, ""),
         },
       },
     },

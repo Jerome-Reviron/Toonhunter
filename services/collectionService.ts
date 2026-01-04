@@ -13,9 +13,7 @@ export const collectionService = {
     }
 
     try {
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/collection.php?user_id=${userId}`
-      );
+      const response = await fetch(`/api/collection.php?user_id=${userId}`);
       const data = await response.json();
 
       return data.collection || {};
@@ -50,7 +48,7 @@ export const collectionService = {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/collection.php`, {
+      const response = await fetch("/api/collection.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
