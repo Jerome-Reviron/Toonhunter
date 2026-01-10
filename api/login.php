@@ -61,6 +61,7 @@ try {
 // Vérification du mot de passe
 if ($user && password_verify($password, $user['password'])) {
     unset($user['password']); // on ne renvoie jamais le hash
+    $user['isPaid'] = intval($user['isPaid']);
     echo json_encode(["success" => true, "user" => $user]);
     return;
 }

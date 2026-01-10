@@ -61,21 +61,6 @@ export const authService = {
     }
   },
 
-  // --------------------------------------------------------------------
-  // 🔐 MOT DE PASSE OUBLIÉ — NOUVELLE VERSION SÉCURISÉE
-  // --------------------------------------------------------------------
-
-  // Ancienne version mockée (conservée pour historique)
-  /*
-  requestPasswordReset: async (email: string): Promise<string> => {
-    if (API_CONFIG.USE_MOCK_DATA) {
-      await new Promise((r) => setTimeout(r, 500));
-      return "123456"; // Simulates sending a code via email
-    }
-    return "123456";
-  },
-  */
-
   requestPasswordReset: async (email: string): Promise<void> => {
     const response = await fetch("/api/forgot-password.php", {
       method: "POST",
@@ -91,17 +76,6 @@ export const authService = {
     // 🔒 Sécurité B : on ne renvoie jamais le code au frontend
     return;
   },
-
-  // Ancienne version mockée (conservée pour historique)
-  /*
-  verifyResetCode: async (email: string, code: string): Promise<boolean> => {
-    if (API_CONFIG.USE_MOCK_DATA) {
-      await new Promise((r) => setTimeout(r, 500));
-      return code === "123456";
-    }
-    return code === "123456";
-  },
-  */
 
   verifyResetCode: async (email: string, code: string): Promise<boolean> => {
     const response = await fetch("/api/verify-reset-code.php",
@@ -119,20 +93,6 @@ export const authService = {
 
     return true;
   },
-
-  // Ancienne version mockée (conservée pour historique)
-  /*
-  resetPassword: async (
-    email: string,
-    code: string,
-    password: string
-  ): Promise<void> => {
-    if (API_CONFIG.USE_MOCK_DATA) {
-      await new Promise((r) => setTimeout(r, 800));
-      return;
-    }
-  },
-  */
 
   resetPassword: async (
     email: string,
