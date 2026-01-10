@@ -31,7 +31,7 @@ export interface LocationTarget {
   promptContext: string;
   validationKeywords?: string;
   imageUrl: string;
-  rarity: "Common" | "Rare" | "Legendary";
+  rarity: "Commune" | "Rare" | "Légendaire";
   isFree?: boolean;
 }
 

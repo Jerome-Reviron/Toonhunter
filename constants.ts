@@ -13,7 +13,7 @@ export const TARGET_LOCATIONS: LocationTarget[] = [
     },
     radiusMeters: 9999999,
     characterName: "Mickey Miniature",
-    rarity: "Common",
+    rarity: "Commune",
     // Le mot clé "Miniature figurine" force la petite taille
     promptContext:
       "A tiny 3D miniature figurine of Mickey Mouse sitting on the RIM/EDGE of the cup behind the handle. The cup handle should partially block the view of Mickey. He is small and waving.",
@@ -32,7 +32,7 @@ export const TARGET_LOCATIONS: LocationTarget[] = [
     },
     radiusMeters: 9999999,
     characterName: "Mickey Mascotte",
-    rarity: "Legendary",
+    rarity: "Légendaire",
     // Prompt modifié pour insister sur la position ARRIÈRE et l'occlusion
     promptContext:
       "3D Mickey Mouse peaking out from BEHIND the person's shoulder. The person is in the foreground and BLOCKS part of Mickey's body. Mickey is standing on the floor in the background. He is waving hello. Realistic fur texture, soft lighting, Pixar style rendering.",
@@ -60,24 +60,24 @@ export const TARGET_LOCATIONS: LocationTarget[] = [
       "https://images.unsplash.com/photo-1614027164847-1b28cfe1df60?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
   {
-  id: "santa-pixar",
-  name: "Père Noël Magique",
-  description:
-    "TEST: Un Père Noël chaleureux en style Pixar. Vise le sol ou un endroit spacieux.",
-  coordinates: {
-    latitude: 45.7122501,
-    longitude: 3.190665,
+    id: "santa-pixar",
+    name: "Père Noël Magique",
+    description:
+      "TEST: Un Père Noël chaleureux en style Pixar. Vise le sol ou un endroit spacieux.",
+    coordinates: {
+      latitude: 45.7122501,
+      longitude: 3.190665,
+    },
+    radiusMeters: 9999999,
+    characterName: "Père Noël",
+    rarity: "Rare",
+    promptContext:
+      "A friendly 3D CGI SANTA CLAUS with a soft red suit, fluffy white beard and warm smile. He is standing BEHIND the human subject, gently leaning forward and peeking over their shoulder. The person in the foreground BLOCKS part of Santa's body (Occlusion). Realistic fabric textures, soft lighting, Pixar-style rendering. Joyful, magical, NOT scary.",
+    validationKeywords:
+      "floor, ground, carpet, santa, christmas, red suit, beard",
+    imageUrl:
+      "https://images.unsplash.com/photo-1543589077-47d81606c1bf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
-  radiusMeters: 9999999,
-  characterName: "Père Noël",
-  rarity: "Rare",
-  promptContext:
-    "A friendly 3D CGI SANTA CLAUS with a soft red suit, fluffy white beard and warm smile. He is standing BEHIND the human subject, gently leaning forward and peeking over their shoulder. The person in the foreground BLOCKS part of Santa's body (Occlusion). Realistic fabric textures, soft lighting, Pixar-style rendering. Joyful, magical, NOT scary.",
-  validationKeywords:
-    "floor, ground, carpet, santa, christmas, red suit, beard",
-  imageUrl:
-    "https://images.unsplash.com/photo-1543589077-47d81606c1bf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-},
 ];
 
 export const GOOGLE_MAPS_URL = (lat: number, lng: number) =>

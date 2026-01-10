@@ -84,13 +84,13 @@ export const LocationCard: React.FC<LocationCardProps> = ({
       : "Localisation...";
 
   const borderColor =
-    location.rarity === "Legendary"
+    location.rarity === "Légendaire"
       ? "border-amber-400"
       : location.rarity === "Rare"
       ? "border-purple-400"
       : "border-blue-400";
   const badgeColor =
-    location.rarity === "Legendary"
+    location.rarity === "Légendaire"
       ? "bg-amber-400 text-black"
       : location.rarity === "Rare"
       ? "bg-purple-500 text-white"

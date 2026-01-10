@@ -43,8 +43,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [lng, setLng] = useState<string>("");
   const [keywords, setKeywords] = useState("");
   const [imageBase64, setImageBase64] = useState<string>("");
-  const [rarity, setRarity] = useState<"Common" | "Rare" | "Legendary">(
-    "Common"
+  const [rarity, setRarity] = useState<"Commune" | "Rare" | "Légendaire">(
+    "Commune"
   );
   const [radius, setRadius] = useState<number>(50);
   const [promptContext, setPromptContext] = useState("");
@@ -148,7 +148,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setCharacterName("");
     setKeywords("");
     setImageBase64("");
-    setRarity("Common");
+    setRarity("Commune");
     setRadius(50);
     generateSmartPrompt("CHARACTER");
     if (userLocation) {
@@ -209,7 +209,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     color,
     label,
   }: {
-    r: "Common" | "Rare" | "Legendary";
+    r: "Commune" | "Rare" | "Légendaire";
     color: string;
     label: string;
   }) => (
@@ -407,7 +407,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </label>
               <div className="flex gap-2">
                 <RarityButton
-                  r="Common"
+                  r="Commune"
                   color="border-blue-500 text-blue-400"
                   label="Commun"
                 />
@@ -417,7 +417,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   label="Rare"
                 />
                 <RarityButton
-                  r="Legendary"
+                  r="Légendaire"
                   color="border-amber-400 text-amber-400"
                   label="Légendaire"
                 />
@@ -476,7 +476,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="space-y-4">
             {locations.map((loc) => {
               const badgeColor =
-                loc.rarity === "Legendary"
+                loc.rarity === "Légendaire"
                   ? "text-amber-400"
                   : loc.rarity === "Rare"
                   ? "text-purple-400"

@@ -719,7 +719,7 @@ const App: React.FC = () => {
                 const item = collection[loc.id];
                 const isFound = !!item;
                 const rarityColor =
-                  loc.rarity === "Legendary"
+                  loc.rarity === "Légendaire"
                     ? "text-amber-400"
                     : loc.rarity === "Rare"
                     ? "text-purple-400"
