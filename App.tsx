@@ -29,6 +29,7 @@ import {
   Radar,
   CircleDot,
   CircleHelp,
+  Loader2,
 } from "lucide-react";
 
 const App: React.FC = () => {
@@ -38,10 +39,7 @@ const App: React.FC = () => {
   const [selectedTarget, setSelectedTarget] = useState<LocationTarget | null>(
     null
   );
-
-  // 👉 Splash activé au démarrage
   const [appState, setAppState] = useState<AppState>(AppState.SPLASH);
-
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
     null
   );
@@ -50,28 +48,34 @@ const App: React.FC = () => {
     item?: CollectionItem;
     target?: LocationTarget;
   }>({ isOpen: false });
-
   const [collection, setCollection] = useState<Record<string, CollectionItem>>(
     {}
   );
-
   const [currentTab, setCurrentTab] = useState<"map" | "collection" | "admin">(
     "map"
   );
-
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // 🔥 Nouveaux states pour le décompte
+  const [countdown, setCountdown] = useState(10);
+  const [isDataReady, setIsDataReady] = useState(false);
+
+  // 🔥 Décompte automatique
+  useEffect(() => {
+    if (appState === AppState.ANALYZING && countdown > 0) {
+      const timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [appState, countdown]);
 
   function compressBase64(base64: string, quality = 0.6): Promise<string> {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-
-        // Taille max (réduit la résolution)
         const maxSize = 1024;
         let width = img.width;
         let height = img.height;
-
         if (width > height) {
           if (width > maxSize) {
             height = (height * maxSize) / width;
@@ -83,18 +87,13 @@ const App: React.FC = () => {
             height = maxSize;
           }
         }
-
         canvas.width = width;
         canvas.height = height;
-
         const ctx = canvas.getContext("2d");
         ctx!.drawImage(img, 0, 0, width, height);
-
-        // Compression JPEG
         const compressed = canvas.toDataURL("image/jpeg", quality);
         resolve(compressed);
       };
-
       img.src = base64;
     });
   }
@@ -102,24 +101,68 @@ const App: React.FC = () => {
   const handleNativeCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64Full = ev.target?.result as string;
-
       e.target.value = "";
-
-      // Compression sur le base64 COMPLET (avec prefix)
       const compressedFull = await compressBase64(base64Full, 0.6);
-
-      // On retire le prefix APRES compression
       const base64 = compressedFull.split(",")[1];
-
       handleCapture(base64);
     };
-
     reader.readAsDataURL(file);
   };
+
+  // 🔥 Nouveau handleCapture avec génération IA + BDD en arrière-plan
+  const handleCapture = async (base64Image: string) => {
+    if (!selectedTarget) return;
+    setCountdown(10);
+    setIsDataReady(false);
+    setAppState(AppState.ANALYZING);
+    setErrorMessage(null);
+    try {
+      const result = await generateCharacterPhoto(base64Image, selectedTarget);
+      const savedItem = await collectionService.addTrophy(
+        user!.id,
+        selectedTarget.id,
+        result.image,
+        result.quote
+      );
+
+      if (!savedItem) {
+        throw new Error("Erreur sauvegarde BDD : savedItem est null");
+      }
+
+      setAnalysisResult({
+        originalImage: `data:image/jpeg;base64,${base64Image}`,
+        processedImage: `data:image/jpeg;base64,${savedItem.photoUrl}`,
+        quote: savedItem.quote,
+      });
+
+      setCollection((prev) => ({
+        ...prev,
+        [selectedTarget.id]: savedItem,
+      }));
+      setIsDataReady(true);
+    } catch (error) {
+      console.error("Capture Error:", error);
+      setErrorMessage("Une interférence magique empêche la matérialisation.");
+      setAppState(AppState.ERROR);
+    }
+  };
+
+  // ---------------------------------------------------------
+  // Empêcher le reload automatique après capture (Android / Chrome bug)
+  // ---------------------------------------------------------
+  useEffect(() => {
+    window.history.scrollRestoration = "manual";
+  }, []);
+  useEffect(() => {
+    const preventReload = (e: Event) => {
+      e.preventDefault();
+    };
+    window.addEventListener("pageshow", preventReload);
+    return () => window.removeEventListener("pageshow", preventReload);
+  }, []);
 
   // ---------------------------------------------------------
   // Chargement utilisateur (sans changer l'état)
@@ -156,6 +199,11 @@ const App: React.FC = () => {
   // GPS
   // ---------------------------------------------------------
   useEffect(() => {
+    // 🔥 Pendant l'écran ANALYZING, on ne met pas à jour le GPS
+    if (appState === AppState.ANALYZING) {
+      return;
+    }
+
     if (user && "geolocation" in navigator) {
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -171,23 +219,24 @@ const App: React.FC = () => {
           maximumAge: 0,
         }
       );
+
       return () => navigator.geolocation.clearWatch(watchId);
     }
-  }, [user]);
+  }, [user, appState]);
 
   // ---------------------------------------------------------
   // SPLASH SCREEN → transition automatique
   // ---------------------------------------------------------
   useEffect(() => {
-    if (appState === AppState.SPLASH) {
-      const timer = setTimeout(() => {
-        const currentUser = authService.getCurrentUser();
-        setAppState(currentUser ? AppState.LIST : AppState.AUTH);
-      }, 3500);
+    if (appState !== AppState.SPLASH) return;
 
-      return () => clearTimeout(timer);
-    }
-  }, [appState]);
+    const timer = setTimeout(() => {
+      const currentUser = authService.getCurrentUser();
+      setAppState(currentUser ? AppState.LIST : AppState.AUTH);
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  }, []); // 🔥 dépendances VIDES
 
   // ---------------------------------------------------------
   // Déconnexion
@@ -206,6 +255,8 @@ const App: React.FC = () => {
     setAppState(AppState.LIST);
     setAnalysisResult(null);
     setSelectedTarget(null);
+    setCountdown(10);
+    setIsDataReady(false);
     setErrorMessage(null);
   }, []);
 
@@ -234,88 +285,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCapture = async (base64Image: string) => {
-    if (!selectedTarget) return;
-
-    setAppState(AppState.ANALYZING);
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    setErrorMessage(null);
-
-    try {
-      // 1) Appel Gemini → renvoie image BRUTE (déjà prefixée data:image/jpeg;base64,)
-      const result = await generateCharacterPhoto(base64Image, selectedTarget);
-
-      // 🖼️ Affichage anticipé immédiat
-      setAnalysisResult({
-        originalImage: `data:image/jpeg;base64,${base64Image}`,
-        processedImage: result.image, // OK, déjà avec prefixe
-        quote: result.quote,
-      });
-
-      // On passe à l’écran RESULT immédiatement
-      setAppState(AppState.RESULT);
-
-      // 2) Enregistrement en BDD → on envoie l'image telle quelle
-      const savedItem = await collectionService.addTrophy(
-        user!.id,
-        selectedTarget.id,
-        result.image, // on envoie l'image complète (avec data:image/...)
-        result.quote
-      );
-
-      if (!savedItem) throw new Error("Erreur sauvegarde");
-
-      // 3) Mise à jour collection locale
-      setCollection((prev) => ({
-        ...prev,
-        [selectedTarget.id]: savedItem,
-      }));
-
-      // 4) Préchargement de l’image compressée avant remplacement
-      const img = new Image();
-      img.src = `data:image/jpeg;base64,${savedItem.photoUrl}`; // ← ICI : prefixe
-      img.onload = () => {
-        setAnalysisResult((prev) => {
-          if (!prev)
-            return {
-              originalImage: `data:image/jpeg;base64,${base64Image}`,
-              processedImage: `data:image/jpeg;base64,${savedItem.photoUrl}`,
-              quote: savedItem.quote,
-            };
-
-          return {
-            originalImage: prev.originalImage,
-            processedImage: `data:image/jpeg;base64,${savedItem.photoUrl}`, // ← ICI AUSSI
-            quote: savedItem.quote,
-          };
-        });
-      };
-    } catch (error: any) {
-      console.error("Capture Error:", error);
-
-      let msg = "Une interférence magique empêche la matérialisation.";
-      if (
-        error.message?.includes("429") ||
-        error.message?.toLowerCase().includes("quota")
-      ) {
-        msg = "La Magie est en panne. Veuillez réessayer dans un moment.";
-      }
-
-      setErrorMessage(msg);
-      setAppState(AppState.ERROR);
-    }
-  };
-
   // ---------------------------------------------------------
-  // 👉 Splash affiché en priorité
+  // UI rendering
   // ---------------------------------------------------------
+
   if (appState === AppState.SPLASH) {
     return <SplashScreen />;
   }
 
-  // ---------------------------------------------------------
-  // Authentification
-  // ---------------------------------------------------------
   if (appState === AppState.AUTH) {
     return (
       <AuthScreen
@@ -329,7 +306,6 @@ const App: React.FC = () => {
 
   if (appState === AppState.ERROR) {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
     return (
       <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col items-center justify-center p-8 text-center">
         <div className="mb-6 p-4 bg-red-500/10 rounded-full">
@@ -338,29 +314,23 @@ const App: React.FC = () => {
         <h2 className="text-2xl font-display font-black text-white mb-4">
           Les éclats de magie ont perturbé la capture !
         </h2>
-
-        {/* 👉 Affichage du message d’erreur */}
         {errorMessage && (
           <>
             {errorMessage ===
             "La capture n’est possible que depuis un appareil mobile." ? (
               !isMobile && (
-                // 🔹 Ce message-là uniquement sur PC
                 <p className="text-gray-400 text-sm max-w-xs mb-12 leading-relaxed">
                   {errorMessage}
                 </p>
               )
             ) : (
-              // 🔹 Les autres messages partout (mobile + PC)
               <p className="text-gray-400 text-sm max-w-xs mb-12 leading-relaxed">
                 {errorMessage}
               </p>
             )}
           </>
         )}
-
         <div className="flex flex-col gap-4 w-full max-w-xs">
-          {/* 👉 Bouton "Réessayer" uniquement sur mobile */}
           {isMobile && (
             <button
               onClick={() => {
@@ -373,7 +343,6 @@ const App: React.FC = () => {
               <RefreshCcw className="w-4 h-4" /> Réessayer la capture
             </button>
           )}
-
           <button
             onClick={handleFinish}
             className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-black uppercase text-white shadow-lg active:scale-95 transition-all"
@@ -387,8 +356,127 @@ const App: React.FC = () => {
 
   if (!userLocation) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#0f0518] text-sm font-black uppercase tracking-widest text-pink-500">
-        Recherche de votre position GPS…
+      <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center p-8 overflow-hidden">
+        <div className="fixed inset-0 flex items-center justify-center bg-[#0f0518] text-sm font-black uppercase tracking-widest text-pink-500">
+          Recherche de votre position GPS…
+        </div>
+      </div>
+    );
+  }
+  type FireworkProps = {
+    x: string;
+    y: string;
+    big?: boolean;
+  };
+
+  const Firework = ({ x, y, big = false }: FireworkProps) => {
+    const colors = ["#ff4fd8", "#7dd3fc", "#a855f7"]; // pink / blue / purple
+    const particleCount = big ? 24 : 12;
+    const distance = big ? 160 : 90;
+
+    return (
+      <>
+        {Array.from({ length: particleCount }).map((_, i) => {
+          const angle = (i / particleCount) * Math.PI * 2;
+          const dx = Math.cos(angle) * distance + "px";
+          const dy = Math.sin(angle) * distance + "px";
+
+          return (
+            <div
+              key={i}
+              className="fw"
+              style={{
+                left: x,
+                top: y,
+                background: colors[Math.floor(Math.random() * colors.length)],
+                ["--dx" as any]: dx,
+                ["--dy" as any]: dy,
+              }}
+            />
+          );
+        })}
+      </>
+    );
+  };
+
+  // 🔥 Écran ANALYZING simplifié : décompte + bouton
+  if (appState === AppState.ANALYZING) {
+    const isReadyToShow = countdown === 0 && isDataReady;
+
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center p-8 overflow-hidden">
+        {/* Explosion synchronisée avec le décompte */}
+        {countdown > 0 && (
+          <Firework
+            x="50%"
+            y="50%"
+            big={countdown === 1} // explosion plus grosse sur le 1
+          />
+        )}
+
+        {/* Explosion finale massive */}
+        {countdown === 0 && isDataReady && (
+          <Firework x="50%" y="50%" big={true} />
+        )}
+
+        {/* Contenu */}
+        <div className="relative z-10 flex flex-col items-center">
+          {/* Décompte */}
+          <div className="flex flex-col items-center justify-center">
+            <div
+              key={countdown}
+              className="text-[12rem] font-[Cinzel] font-[600] text-white/90 animate-[fadeScaleMagic_1s_ease-out] drop-shadow-[0_0_40px_rgba(255,255,255,0.2)]"
+            >
+              {countdown > 0 ? countdown : ""}
+            </div>
+          </div>
+
+          {/* Texte */}
+          <div className="text-center space-y-6 max-w-sm mt-6">
+            <p className="text-3xl font-display font-black text-white">
+              {countdown > 0
+                ? `Invocation de ${selectedTarget?.characterName}...`
+                : isDataReady
+                ? "La magie est prête !"
+                : "Encore un instant..."}
+            </p>
+          </div>
+
+          {/* Bouton */}
+          <div
+            className={`mt-16 w-full max-w-xs transition-all duration-1000 transform ${
+              isReadyToShow
+                ? "translate-y-0 opacity-100 scale-100"
+                : "translate-y-20 opacity-0 scale-95 pointer-events-none"
+            }`}
+          >
+            <button
+              onClick={() => setAppState(AppState.RESULT)}
+              className="
+              w-full py-4 
+              bg-gradient-to-r from-pink-500 to-purple-600 
+              rounded-xl
+              font-black uppercase
+              text-white 
+              shadow-lg 
+              active:scale-95 
+              transition-all
+            "
+            >
+              Révélation
+            </button>
+          </div>
+
+          {/* Loader */}
+          {!isDataReady && countdown === 0 && (
+            <div className="mt-12 flex flex-col items-center gap-4">
+              <div className="relative">
+                <Loader2 className="w-14 h-14 text-[#D4AF37]/20 animate-spin" />
+                <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37] animate-pulse" />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -396,34 +484,44 @@ const App: React.FC = () => {
   if (appState === AppState.RESULT && analysisResult) {
     return (
       <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col overflow-y-auto">
+        {" "}
         <div className="p-6 flex justify-between items-center bg-black/40 backdrop-blur-md sticky top-0 z-10 border-b border-white/10">
+          {" "}
           <h2 className="text-xl font-display font-black text-white">
-            Capture Réussie !
-          </h2>
+            {" "}
+            Capture Réussie !{" "}
+          </h2>{" "}
           <button
             onClick={handleFinish}
             className="p-2 bg-white/10 rounded-full text-white"
           >
-            <X />
-          </button>
-        </div>
+            {" "}
+            <X />{" "}
+          </button>{" "}
+        </div>{" "}
         <div className="px-6 flex-1 flex flex-col gap-4 max-w-md mx-auto w-full pb-12 pt-4">
+          {" "}
           <div className="rounded-3xl overflow-hidden shadow-2xl border-2 border-pink-500/50 bg-gray-900 shine-effect">
+            {" "}
             <img
-              src={`data:image/jpeg;base64,${analysisResult.processedImage}`}
+              src={analysisResult.processedImage}
               className="w-full aspect-[3/4] object-cover"
               alt="Result"
-            />
-          </div>
+            />{" "}
+          </div>{" "}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center shadow-inner">
+            {" "}
             <p className="text-pink-400 font-bold mb-1 uppercase text-[10px] tracking-widest">
-              Message de {selectedTarget?.characterName}
-            </p>
+              {" "}
+              Message de {selectedTarget?.characterName}{" "}
+            </p>{" "}
             <p className="text-md font-display italic text-white leading-tight">
-              "{analysisResult.quote}"
-            </p>
-          </div>
+              {" "}
+              "{analysisResult.quote}"{" "}
+            </p>{" "}
+          </div>{" "}
           <div className="grid grid-cols-2 gap-3">
+            {" "}
             <button
               onClick={() =>
                 downloadImage(
@@ -433,16 +531,18 @@ const App: React.FC = () => {
               }
               className="py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-white/20"
             >
-              <Download className="w-5 h-5" /> Sauvegarder
-            </button>
+              {" "}
+              <Download className="w-5 h-5" /> Télécharger{" "}
+            </button>{" "}
             <button
               onClick={handleFinish}
               className="py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-black uppercase text-white shadow-lg active:scale-95 transition-all"
             >
-              Terminer
-            </button>
-          </div>
-        </div>
+              {" "}
+              Terminer{" "}
+            </button>{" "}
+          </div>{" "}
+        </div>{" "}
       </div>
     );
   }

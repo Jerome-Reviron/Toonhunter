@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600&family=Nunito:wght@400;700;900&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap");
 
       body {
         font-family: "Nunito", sans-serif;
@@ -71,6 +72,25 @@
         100% {
           left: 150%;
         }
+      }
+      /* Explosion d'une particule */
+      @keyframes explode {
+        0% {
+          transform: translate(0, 0) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(var(--dx), var(--dy)) scale(0.2);
+          opacity: 0;
+        }
+      }
+
+      .fw {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        animation: explode 1.2s ease-out forwards;
       }
     </style>
     <script type="importmap">

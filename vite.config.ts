@@ -23,7 +23,11 @@ export default defineConfig(({ mode }) => {
       host: "0.0.0.0",
       port: 5173,
 
-      hmr: false,
+      // ❗ On force le client HMR à essayer localhost → échec immédiat → stabilité
+      hmr: { protocol: "wss", host: "localhost", port: 5173, overlay: false },
+
+      // 🔥 Indispensable pour mobile + Windows
+      watch: { usePolling: true, interval: 1000 },
 
       // 🔥 PROXY API — LA CLÉ POUR QUE LE TÉLÉPHONE FONCTIONNE
       proxy: {

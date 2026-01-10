@@ -244,13 +244,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 mt-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="
+              w-full py-4 
+              bg-gradient-to-r from-pink-500 to-purple-600 
+              hover:from-pink-400 hover:to-purple-500 
+              font-black uppercase
+              text-white font-bold 
+              rounded-xl 
+              shadow-lg 
+              transition active:scale-95 
+              flex 
+              items-center 
+              justify-center 
+              gap-2 
+              disabled:opacity-70 
+              disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" /> Se Connecter
+                  <LogIn className="w-5 h-5" /> Se connecter
                 </>
               )}
             </button>
@@ -358,7 +372,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 mt-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70"
+              className=" 
+              w-full py-4 
+              bg-gradient-to-r from-pink-500 to-purple-600 
+              hover:from-pink-400 hover:to-purple-500 
+              font-black uppercase
+              text-white font-bold 
+              rounded-xl 
+              shadow-lg 
+              transition active:scale-95 
+              flex 
+              items-center 
+              justify-center 
+              gap-2 
+              disabled:opacity-70 
+              disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -485,7 +513,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70"
+                className="   
+                  w-full py-4 
+                  bg-gradient-to-r from-pink-500 to-purple-600 
+                  hover:from-pink-400 hover:to-purple-500 
+                  font-black uppercase
+                  text-white font-bold 
+                  rounded-xl 
+                  shadow-lg 
+                  transition active:scale-95 
+                  flex 
+                  items-center 
+                  justify-center 
+                  gap-2 
+                  disabled:opacity-70 
+                  disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
