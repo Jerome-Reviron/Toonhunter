@@ -15,17 +15,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-
-
 // ---------------------------------------------------------
-// GET : récupérer toutes les locations
+// GET : récupérer toutes les locations (PUBLIC)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     error_log(">>> [Location] GET reçu");
 
     try {
         $stmt = $pdo->query("SELECT * FROM locations");
-        $locations = $stmt->fetchAll();
+        $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log("Erreur SQL GET locations: " . $e->getMessage());
         http_response_code(500);
@@ -40,16 +38,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
         $loc['radiusMeters'] = isset($loc['radiusMeters']) ? (int)$loc['radiusMeters'] : 0;
     }
+
     error_log(">>> [Location] GET terminé, " . count($locations) . " lieux renvoyés");
 
     echo json_encode(["success" => true, "locations" => $locations]);
     return;
 }
 
+// ---------------------------------------------------------
+// 🔒 Fonction : vérifier si un userId est admin
+// ---------------------------------------------------------
+function requireAdmin($pdo, $userId) {
+    if (!$userId) {
+        http_response_code(401);
+        echo json_encode(["success" => false, "message" => "Utilisateur non authentifié."]);
+        exit;
+    }
 
+    $stmt = $pdo->prepare("SELECT role FROM users WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $userId]);
+    $u = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $role = strtolower(trim($u['role'] ?? 'user'));
+    if ($role !== 'admin') {
+        http_response_code(403);
+        echo json_encode(["success" => false, "message" => "Accès refusé : droits administrateur requis."]);
+        exit;
+    }
+}
 
 // ---------------------------------------------------------
-// POST : ajouter une nouvelle location
+// POST : ajouter une nouvelle location (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -62,6 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
+    // 🔒 Vérification admin
+    $userId = intval($data->userId ?? 0);
+    requireAdmin($pdo, $userId);
+
     $name          = trim($data->name ?? '');
     $description   = trim($data->description ?? '');
     $characterName = trim($data->characterName ?? '');
@@ -73,11 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
 
-    // Validation minimale
-    if (
-        $name === '' || $characterName === '' ||
-        $lat === null || $lng === null || $radius === null
-    ) {
+    if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Données obligatoires manquantes."]);
         return;
@@ -104,10 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':validationKeywords'=> $validationKeywords
         ]);
 
-        echo json_encode([
-            "success" => true,
-            "id" => (int)$pdo->lastInsertId()
-        ]);
+        echo json_encode(["success" => true, "id" => (int)$pdo->lastInsertId()]);
         return;
 
     } catch (PDOException $e) {
@@ -118,20 +134,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-
-
 // ---------------------------------------------------------
-// PUT : mettre à jour une location existante
+// PUT : mettre à jour une location existante (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 
-    $data = json_decode(file_get_contents("php://input"));
+    $raw = file_get_contents("php://input");
+    $data = json_decode($raw);
 
     if (!$data || !isset($data->id)) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "ID manquant."]);
         return;
     }
+
+    // 🔒 Vérification admin
+    $userId = intval($data->userId ?? 0);
+    requireAdmin($pdo, $userId);
 
     try {
         $stmt = $pdo->prepare("
@@ -174,10 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     }
 }
 
-
-
 // ---------------------------------------------------------
-// DELETE : supprimer une location
+// DELETE : supprimer une location (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
@@ -188,6 +205,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         echo json_encode(["success" => false, "message" => "ID manquant."]);
         return;
     }
+
+    // 🔒 Vérification admin
+    $userId = intval($query['userId'] ?? 0);
+    requireAdmin($pdo, $userId);
 
     try {
         $stmt = $pdo->prepare("DELETE FROM locations WHERE id = :id");
@@ -203,8 +224,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         return;
     }
 }
-
-
 
 // ---------------------------------------------------------
 // Méthode non autorisée

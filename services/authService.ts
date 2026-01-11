@@ -18,7 +18,7 @@ export const authService = {
         pseudo: isAdmin ? "Jerome" : email.split("@")[0],
         email: email,
         role: isAdmin ? "admin" : "user",
-        isPaid: true,
+        isPaid: isAdmin ? 1 : 0,
         createdAt: new Date().toISOString(),
       };
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
@@ -35,6 +35,7 @@ export const authService = {
           throw new Error(data.message || "Email ou mot de passe incorrect.");
         }
         const user = data.user;
+        user.isPaid = Number(user.isPaid);
         localStorage.setItem(SESSION_KEY, JSON.stringify(user));
         return user;
       } catch (error: any) {
@@ -78,13 +79,11 @@ export const authService = {
   },
 
   verifyResetCode: async (email: string, code: string): Promise<boolean> => {
-    const response = await fetch("/api/verify-reset-code.php",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      }
-    );
+    const response = await fetch("/api/verify-reset-code.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
 
     const data = await response.json();
     if (!data.success) {

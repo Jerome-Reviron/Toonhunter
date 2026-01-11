@@ -117,17 +117,18 @@ try {
 // ---------------------------------------------------------
 // 6) Vérification du mot de passe
 // ---------------------------------------------------------
-if ($user && password_verify($password, $user['password'])) {
+unset($user['password']);
+$user['isPaid'] = intval($user['isPaid']); // conversion sécurisée
 
-    // Reset des tentatives
-    $pdo->prepare("DELETE FROM login_attempts WHERE ip = :ip")->execute([':ip' => $ip]);
-
-    unset($user['password']);
-    $user['isPaid'] = intval($user['isPaid']); // conversion sécurisée
-
-    echo json_encode(["success" => true, "user" => $user]);
-    return;
+// 🔥 Normalisation du rôle (anti falsification)
+$role = strtolower(trim($user['role']));
+if ($role !== 'admin') {
+    $role = 'user'; // tout ce qui n'est pas EXACTEMENT "admin" devient user
 }
+$user['role'] = $role;
+
+echo json_encode(["success" => true, "user" => $user]);
+return;
 
 // ---------------------------------------------------------
 // 7) Mot de passe incorrect → enregistrer tentative

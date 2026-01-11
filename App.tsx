@@ -55,12 +55,14 @@ const App: React.FC = () => {
     "map"
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // 🔥 Nouveaux states pour le décompte
   const [countdown, setCountdown] = useState(10);
   const [isDataReady, setIsDataReady] = useState(false);
+  const [adminAccessDenied, setAdminAccessDenied] = useState(false);
 
+  // ---------------------------------------------------------
   // 🔥 Décompte automatique
+  // ---------------------------------------------------------
+
   useEffect(() => {
     if (appState === AppState.ANALYZING && countdown > 0) {
       const timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
@@ -112,59 +114,11 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  // // 🔥 Nouveau handleCapture avec génération IA + BDD en arrière-plan
-  // const handleCapture = async (base64Image: string) => {
-  //   if (!selectedTarget) return;
-
-  //   // 🚨 Vérification premium AVANT TOUT
-  //   if (user?.isPaid !== 1) {
-  //     setErrorMessage("Accès premium requis.");
-  //     setAppState(AppState.ERROR);
-  //     return;
-  //   }
-
-  //   // 🔥 Si premium → on peut lancer le workflow
-  //   setCountdown(10);
-  //   setIsDataReady(false);
-  //   setAppState(AppState.ANALYZING);
-  //   setErrorMessage(null);
-
-  //   try {
-  //     const result = await generateCharacterPhoto(base64Image, selectedTarget);
-
-  //     const savedItem = await collectionService.addTrophy(
-  //       user!.id,
-  //       selectedTarget.id,
-  //       result.image,
-  //       result.quote
-  //     );
-
-  //     if (!savedItem) {
-  //       throw new Error("Erreur sauvegarde BDD : savedItem est null");
-  //     }
-
-  //     setAnalysisResult({
-  //       originalImage: `data:image/jpeg;base64,${base64Image}`,
-  //       processedImage: `data:image/jpeg;base64,${savedItem.photoUrl}`,
-  //       quote: savedItem.quote,
-  //     });
-
-  //     setCollection((prev) => ({
-  //       ...prev,
-  //       [selectedTarget.id]: savedItem,
-  //     }));
-
-  //     setIsDataReady(true);
-  //   } catch (error) {
-  //     console.error("Capture Error:", error);
-  //     setErrorMessage("Une interférence magique empêche la matérialisation.");
-  //     setAppState(AppState.ERROR);
-  //   }
-  // };
   const handleCapture = async (base64Image: string) => {
     if (!selectedTarget || !user) return;
-
+    // ---------------------------------------------------------
     // 🚨 Vérification premium CÔTÉ BACKEND AVANT TOUT
+    // ---------------------------------------------------------
     try {
       const res = await fetch(`/api/check_premium.php?user_id=${user.id}`);
       const data = await res.json();
@@ -322,13 +276,19 @@ const App: React.FC = () => {
 
   const handleFinish = async () => {
     if (!user) return;
+
     try {
       const res = await fetch(`/api/get_user_refresh.php?user_id=${user.id}`);
       const data = await res.json();
 
       if (data.success && data.user) {
-        setUser(data.user);
-        localStorage.setItem("toonhunter_session", JSON.stringify(data.user));
+        const refreshed = data.user;
+
+        // 🔥 Normalisation du type (évite 100% des bugs TS et premium)
+        refreshed.isPaid = Number(refreshed.isPaid);
+
+        setUser(refreshed);
+        localStorage.setItem("toonhunter_session", JSON.stringify(refreshed));
       }
     } catch (e) {
       console.error("Erreur refresh user:", e);
@@ -617,6 +577,43 @@ const App: React.FC = () => {
     );
   }
 
+  // 🟣 PAGE INDÉPENDANTE : accès admin refusé
+  if (adminAccessDenied) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#0f0518] flex flex-col items-center justify-center p-8 text-center">
+        {/* Icône d’avertissement */}
+        <div className="mb-6 p-4 bg-red-500/10 rounded-full">
+          <AlertTriangle className="w-12 h-12 text-red-500" />
+        </div>
+
+        {/* Titre */}
+        <h2 className="text-2xl font-display font-black text-white mb-4">
+          Accès réservé aux administrateurs
+        </h2>
+
+        {/* Message */}
+        <p className="text-gray-400 text-sm max-w-xs mb-12 leading-relaxed">
+          Les éclats de magie ne suffisent pas pour accéder à cette zone
+          secrète…
+        </p>
+
+        {/* Bouton */}
+        <div className="flex flex-col gap-4 w-full max-w-xs">
+          <button
+            onClick={async () => {
+              await handleFinish();
+              setAdminAccessDenied(false);
+              setCurrentTab("map");
+            }}
+            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-black uppercase text-white shadow-lg active:scale-95 transition-all"
+          >
+            Retour au parc
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0518] text-white overflow-x-hidden font-nunito">
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -662,9 +659,25 @@ const App: React.FC = () => {
             >
               <Trophy className="w-5 h-5" />
             </button>
+
             {user?.role === "admin" && (
               <button
-                onClick={() => setCurrentTab("admin")}
+                onClick={async () => {
+                  // Vérification en BDD AVANT d’ouvrir le panel admin
+                  const res = await fetch(
+                    `/api/get_user_refresh.php?user_id=${user.id}`
+                  );
+                  const data = await res.json();
+
+                  if (!data.success || data.user.role !== "admin") {
+                    // ❌ Pas admin en BDD → page intermédiaire
+                    setAdminAccessDenied(true);
+                    return;
+                  }
+
+                  // ✔ Admin réel → accès autorisé
+                  setCurrentTab("admin");
+                }}
                 className={`p-2.5 rounded-xl transition-all ${
                   currentTab === "admin"
                     ? "bg-white/10 text-red-400 shadow-[0_0_15px_rgba(248,113,113,0.3)]"
@@ -674,6 +687,7 @@ const App: React.FC = () => {
                 <Lock className="w-5 h-5" />
               </button>
             )}
+
             <button
               onClick={handleLogout}
               className="p-2.5 text-gray-500 hover:text-white transition-colors"
@@ -886,7 +900,6 @@ const App: React.FC = () => {
             }}
             onUpdateLocation={async (l) => {
               await locationService.update(l);
-              setLocations(locations.map((x) => (x.id === l.id ? l : x)));
             }}
             onDeleteLocation={async (id) => {
               await locationService.delete(id);
