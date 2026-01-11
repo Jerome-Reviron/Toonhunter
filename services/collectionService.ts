@@ -59,12 +59,13 @@ export const collectionService = {
         }),
       });
 
-      const data = await response.json();
-
-      if (!data.success) {
-        console.error("Erreur API addTrophy:", data);
-        return null;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erreur API");
       }
+
+      const data = await response.json();
+      return data.item || null;
 
       // Le backend renvoie maintenant l'objet complet
       return data.item || null;

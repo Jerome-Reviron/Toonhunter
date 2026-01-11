@@ -10,7 +10,7 @@ export interface User {
   pseudo: string;
   email: string;
   role: "admin" | "user";
-  isPaid: boolean;
+  isPaid: number;
   createdAt: string;
 }
 

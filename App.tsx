@@ -112,17 +112,85 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  // 🔥 Nouveau handleCapture avec génération IA + BDD en arrière-plan
+  // // 🔥 Nouveau handleCapture avec génération IA + BDD en arrière-plan
+  // const handleCapture = async (base64Image: string) => {
+  //   if (!selectedTarget) return;
+
+  //   // 🚨 Vérification premium AVANT TOUT
+  //   if (user?.isPaid !== 1) {
+  //     setErrorMessage("Accès premium requis.");
+  //     setAppState(AppState.ERROR);
+  //     return;
+  //   }
+
+  //   // 🔥 Si premium → on peut lancer le workflow
+  //   setCountdown(10);
+  //   setIsDataReady(false);
+  //   setAppState(AppState.ANALYZING);
+  //   setErrorMessage(null);
+
+  //   try {
+  //     const result = await generateCharacterPhoto(base64Image, selectedTarget);
+
+  //     const savedItem = await collectionService.addTrophy(
+  //       user!.id,
+  //       selectedTarget.id,
+  //       result.image,
+  //       result.quote
+  //     );
+
+  //     if (!savedItem) {
+  //       throw new Error("Erreur sauvegarde BDD : savedItem est null");
+  //     }
+
+  //     setAnalysisResult({
+  //       originalImage: `data:image/jpeg;base64,${base64Image}`,
+  //       processedImage: `data:image/jpeg;base64,${savedItem.photoUrl}`,
+  //       quote: savedItem.quote,
+  //     });
+
+  //     setCollection((prev) => ({
+  //       ...prev,
+  //       [selectedTarget.id]: savedItem,
+  //     }));
+
+  //     setIsDataReady(true);
+  //   } catch (error) {
+  //     console.error("Capture Error:", error);
+  //     setErrorMessage("Une interférence magique empêche la matérialisation.");
+  //     setAppState(AppState.ERROR);
+  //   }
+  // };
   const handleCapture = async (base64Image: string) => {
-    if (!selectedTarget) return;
+    if (!selectedTarget || !user) return;
+
+    // 🚨 Vérification premium CÔTÉ BACKEND AVANT TOUT
+    try {
+      const res = await fetch(`/api/check_premium.php?user_id=${user.id}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success || data.isPaid !== 1) {
+        setErrorMessage("Accès premium requis.");
+        setAppState(AppState.ERROR);
+        return;
+      }
+    } catch (e) {
+      console.error("Erreur check_premium:", e);
+      setErrorMessage("Erreur de vérification de l'accès premium.");
+      setAppState(AppState.ERROR);
+      return;
+    }
+
+    // 🔥 Si premium confirmé PAR LA BDD → on peut lancer le workflow
     setCountdown(10);
     setIsDataReady(false);
     setAppState(AppState.ANALYZING);
     setErrorMessage(null);
+
     try {
       const result = await generateCharacterPhoto(base64Image, selectedTarget);
       const savedItem = await collectionService.addTrophy(
-        user!.id,
+        user.id,
         selectedTarget.id,
         result.image,
         result.quote
@@ -142,6 +210,7 @@ const App: React.FC = () => {
         ...prev,
         [selectedTarget.id]: savedItem,
       }));
+
       setIsDataReady(true);
     } catch (error) {
       console.error("Capture Error:", error);
@@ -251,14 +320,27 @@ const App: React.FC = () => {
     setCurrentTab("map");
   };
 
-  const handleFinish = useCallback(() => {
-    setAppState(AppState.LIST);
-    setAnalysisResult(null);
+  const handleFinish = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/get_user_refresh.php?user_id=${user.id}`);
+      const data = await res.json();
+
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem("toonhunter_session", JSON.stringify(data.user));
+      }
+    } catch (e) {
+      console.error("Erreur refresh user:", e);
+    }
+
+    // 🔄 Reset de l’app
     setSelectedTarget(null);
-    setCountdown(10);
-    setIsDataReady(false);
+    setAppState(AppState.LIST);
     setErrorMessage(null);
-  }, []);
+    setIsDataReady(false);
+    setCountdown(0);
+  };
 
   const downloadImage = async (base64Data: string, fileName: string) => {
     try {
@@ -331,18 +413,6 @@ const App: React.FC = () => {
           </>
         )}
         <div className="flex flex-col gap-4 w-full max-w-xs">
-          {isMobile && (
-            <button
-              onClick={() => {
-                if (selectedTarget) {
-                  document.getElementById("native-capture")?.click();
-                }
-              }}
-              className="w-full py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 hover:bg-white/20 transition-all"
-            >
-              <RefreshCcw className="w-4 h-4" /> Réessayer la capture
-            </button>
-          )}
           <button
             onClick={handleFinish}
             className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-black uppercase text-white shadow-lg active:scale-95 transition-all"
@@ -677,7 +747,7 @@ const App: React.FC = () => {
                   userCoords={userLocation}
                   isCollected={!!collection[loc.id]}
                   hasAccess={
-                    user?.isPaid ||
+                    user?.isPaid === 1 ||
                     locations.slice(0, 3).some((l) => l.id === loc.id)
                   }
                   onSelect={(t) => {

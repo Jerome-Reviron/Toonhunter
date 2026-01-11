@@ -1,5 +1,7 @@
 <?php
 error_log("REAL FILE = " . __FILE__);
+error_log(">>> [Collection] Fichier exécuté : " . __FILE__);
+
 
 require_once __DIR__ . "/cors.php";
 require_once __DIR__ . "/db.php";
@@ -53,12 +55,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // ---------------------------------------------------------
 // POST : ajouter un trophée (stockage base64 en BDD)
 // ---------------------------------------------------------
+// if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+//     $raw = file_get_contents("php://input");
+//     $data = json_decode($raw);
+
+//     if (!$data) {
+//         http_response_code(400);
+//         echo json_encode(["success" => false, "message" => "JSON invalide."]);
+//         return;
+//     }
+
+//     $userId      = (int)($data->userId ?? 0);
+//     $locationId  = (int)($data->locationId ?? 0);
+//     $photoBase64 = $data->photoUrl ?? '';
+//     $quote       = trim($data->quote ?? '');
+
+//     // Vérifier que l'utilisateur est premium
+//     $stmt = $pdo->prepare("SELECT isPaid FROM users WHERE id = :id");
+//     $stmt->execute([':id' => $userId]);
+//     $user = $stmt->fetch();
+
+//     if (!$user || intval($user['isPaid']) !== 1) {
+//         http_response_code(403);
+//         echo json_encode([
+//             "success" => false,
+//             "message" => "Accès premium requis."
+//         ]);
+//         return;
+//     }
+
+//     if ($userId <= 0 || $locationId <= 0 || $photoBase64 === '') {
+//         http_response_code(400);
+//         echo json_encode(["success" => false, "message" => "Données incomplètes."]);
+//         return;
+//     }
+
+//     // Nettoyage éventuel du base64
+//     if (strpos($photoBase64, "base64,") !== false) {
+//         $photoBase64 = explode("base64,", $photoBase64)[1];
+//     }
+
+//     try {
+//         $stmt = $pdo->prepare("
+//             INSERT INTO collection (userId, locationId, photoUrl, quote, capturedAt)
+//             VALUES (:userId, :locationId, :photoUrl, :quote, NOW())
+//             ON DUPLICATE KEY UPDATE 
+//                 photoUrl = VALUES(photoUrl),
+//                 quote = VALUES(quote),
+//                 capturedAt = NOW()
+//         ");
+
+//         $stmt->execute([
+//             ':userId'     => $userId,
+//             ':locationId' => $locationId,
+//             ':photoUrl'   => $photoBase64,
+//             ':quote'      => $quote
+//         ]);
+
+//         // Récupérer la ligne fraîchement insérée/mise à jour
+//         $stmt2 = $pdo->prepare("SELECT * FROM collection WHERE userId = :userId AND locationId = :locationId");
+//         $stmt2->execute([
+//             ':userId' => $userId,
+//             ':locationId' => $locationId
+//         ]);
+//         $item = $stmt2->fetch();
+
+//     } catch (PDOException $e) {
+//         error_log("Erreur SQL POST collection: " . $e->getMessage());
+//         http_response_code(500);
+//         echo json_encode(["success" => false, "message" => "Erreur interne."]);
+//         return;
+//     }
+
+//     echo json_encode([
+//         "success" => true,
+//         "item" => [
+//             "id"         => $item['id'],
+//             "userId"     => $item['userId'],
+//             "locationId" => $item['locationId'],
+//             "photoUrl"   => $item['photoUrl'],
+//             "quote"      => $item['quote'],
+//             "capturedAt" => $item['capturedAt'],
+//         ]
+//     ]);
+//     return;
+// }
+// ---------------------------------------------------------
+// POST : ajouter un trophée (stockage base64 en BDD)
+// ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    error_log(">>> [Collection] POST reçu");
 
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
 
     if (!$data) {
+        error_log(">>> [Collection] JSON invalide");
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "JSON invalide."]);
         return;
@@ -69,18 +163,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $photoBase64 = $data->photoUrl ?? '';
     $quote       = trim($data->quote ?? '');
 
+    error_log(">>> [Collection] Données reçues : userId=$userId, locationId=$locationId");
+
+    // 1) Vérifier que l'utilisateur existe + premium AVANT TOUT
+    try {
+        $stmt = $pdo->prepare("SELECT isPaid FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $userId]);
+        $user = $stmt->fetch();
+    } catch (PDOException $e) {
+        error_log("Erreur SQL SELECT user isPaid: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(["success" => false, "message" => "Erreur interne."]);
+        return;
+    }
+
+    if (!$user || intval($user['isPaid']) !== 1) {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        error_log(">>> [SECURITY] Capture BLOQUÉE (non premium) : userId=$userId, isPaid=" . ($user['isPaid'] ?? 'null') . ", IP=$ip");
+        http_response_code(403);
+        echo json_encode([
+            "success" => false,
+            "message" => "Accès premium requis."
+        ]);
+        return; // 🔥 ON STOPPE TOUT ICI
+    }
+
+    // 2) Validation des données
     if ($userId <= 0 || $locationId <= 0 || $photoBase64 === '') {
+        error_log(">>> [Collection] Données incomplètes pour userId=$userId, locationId=$locationId");
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Données incomplètes."]);
         return;
     }
 
-    // Nettoyage éventuel du base64
+    // 3) Nettoyage éventuel du base64
     if (strpos($photoBase64, "base64,") !== false) {
         $photoBase64 = explode("base64,", $photoBase64)[1];
     }
 
     try {
+        error_log(">>> [SECURITY] Capture ENREGISTREE : userId=$userId, locationId=$locationId");
+
         $stmt = $pdo->prepare("
             INSERT INTO collection (userId, locationId, photoUrl, quote, capturedAt)
             VALUES (:userId, :locationId, :photoUrl, :quote, NOW())
