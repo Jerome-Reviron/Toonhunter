@@ -4,7 +4,19 @@ require_once __DIR__ . "/db.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
-$userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+// ---------------------------------------------------------
+// 1) Vérification méthode HTTP
+// ---------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    http_response_code(405);
+    echo json_encode(["success" => false, "message" => "Méthode non autorisée."]);
+    return;
+}
+
+// ---------------------------------------------------------
+// 2) Récupération et validation du user_id
+// ---------------------------------------------------------
+$userId = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
 
 if ($userId <= 0) {
     http_response_code(400);
@@ -12,10 +24,19 @@ if ($userId <= 0) {
     return;
 }
 
+// ---------------------------------------------------------
+// 3) Récupération en base
+// ---------------------------------------------------------
 try {
-    $stmt = $pdo->prepare("SELECT isPaid FROM users WHERE id = :id LIMIT 1");
+    $stmt = $pdo->prepare("
+        SELECT isPaid
+        FROM users
+        WHERE id = :id
+        LIMIT 1
+    ");
     $stmt->execute([':id' => $userId]);
-    $user = $stmt->fetch();
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
 } catch (PDOException $e) {
     error_log("Erreur SQL check_premium: " . $e->getMessage());
     http_response_code(500);
@@ -29,7 +50,16 @@ if (!$user) {
     return;
 }
 
+// ---------------------------------------------------------
+// 4) Normalisation stricte de isPaid
+// ---------------------------------------------------------
+$isPaidValue = isset($user['isPaid']) ? intval($user['isPaid']) : 0;
+$isPaidNormalized = ($isPaidValue === 1) ? 1 : 0;
+
+// ---------------------------------------------------------
+// 5) Réponse finale
+// ---------------------------------------------------------
 echo json_encode([
     "success" => true,
-    "isPaid" => intval($user['isPaid']) // 0 ou 1
+    "isPaid"  => $isPaidNormalized // toujours 0 ou 1
 ]);
