@@ -6,7 +6,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 $dotenv = \Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-
+date_default_timezone_set('Europe/Paris');
 // ---------------------------------------------------------
 // CORS dynamique
 // ---------------------------------------------------------
@@ -48,6 +48,10 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+    // --------------------------------------------------------- 
+    // Fuseau horaire MySQL (session) 
+    // --------------------------------------------------------- 
+    $pdo->exec("SET time_zone = '+01:00'");
 } catch (PDOException $e) {
     error_log('Erreur de connexion BDD: ' . $e->getMessage());
     http_response_code(500);
