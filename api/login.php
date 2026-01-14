@@ -5,7 +5,6 @@
 
 require_once __DIR__ . "/cors.php";
 require_once __DIR__ . '/db.php';
-date_default_timezone_set('Europe/Paris');
 
 header("Content-Type: application/json; charset=UTF-8");
 

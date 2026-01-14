@@ -66,6 +66,12 @@ if (strlen($password) < 8) {
     return;
 }
 
+if (strlen($password) > 200) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "Mot de passe trop long."]);
+    return;
+}
+
 // Mot de passe : majuscule, minuscule, chiffre, caractère spécial
 $regexPassword = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/';
 

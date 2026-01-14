@@ -1,64 +1,158 @@
 <?php
-/* 
-Ancienne version inexistante — nouveau fichier.
-*/
-
-// ---------------------------------------------------------
-// Version sécurisée : verify-reset-code.php
-// ---------------------------------------------------------
-
 require_once __DIR__ . "/cors.php";
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . "/db.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
-// Vérification méthode HTTP
+// ---------------------------------------------------------
+// 1) Vérification méthode HTTP
+// ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(["success" => false, "message" => "Méthode non autorisée."]);
     exit;
 }
 
-// Lecture du JSON
+// ---------------------------------------------------------
+// 2) Lecture + validation JSON
+// ---------------------------------------------------------
 $raw = file_get_contents("php://input");
 $data = json_decode($raw);
 
 if (!$data || empty($data->email) || empty($data->code)) {
     http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Email et code requis."]);
-    exit;
-}
-
-$email = trim($data->email);
-$code = trim($data->code);
-
-// Vérifie si un code existe pour cet email
-$stmt = $pdo->prepare("
-    SELECT token, expires_at 
-    FROM password_resets 
-    WHERE email = :email 
-    ORDER BY id DESC 
-    LIMIT 1
-");
-$stmt->execute([':email' => $email]);
-$reset = $stmt->fetch();
-
-if (!$reset) {
     echo json_encode(["success" => false, "message" => "Code invalide."]);
     exit;
 }
 
-// Vérifie expiration
-if (strtotime($reset['expires_at']) < time()) {
-    echo json_encode(["success" => false, "message" => "Code expiré."]);
+$email = strtolower(trim($data->email));
+$code  = trim($data->code);
+
+// Validation email
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 255) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "Code invalide."]);
     exit;
 }
 
-// Vérifie le code
-if ($reset['token'] !== $code) {
-    echo json_encode(["success" => false, "message" => "Code incorrect."]);
+// Validation code (6 chiffres)
+if (!preg_match('/^[0-9]{6}$/', $code)) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "Code invalide."]);
     exit;
 }
 
-// Tout est OK
+// ---------------------------------------------------------
+// 3) Anti-bruteforce par IP (5 tentatives / 15 min)
+// ---------------------------------------------------------
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
+try {
+    $stmt = $pdo->prepare("
+        SELECT attempts, last_attempt 
+        FROM reset_attempts 
+        WHERE ip = :ip
+    ");
+    $stmt->execute([':ip' => $ip]);
+    $attempt = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Erreur SQL verify-reset-code (select attempts): " . $e->getMessage());
+}
+
+$maxAttempts = 5;
+$blockTime   = 15 * 60;
+
+if ($attempt) {
+    $elapsed = time() - strtotime($attempt['last_attempt']);
+
+    if ($attempt['attempts'] >= $maxAttempts && $elapsed < $blockTime) {
+        http_response_code(429);
+        echo json_encode(["success" => false, "message" => "Code invalide."]);
+        exit;
+    }
+
+    if ($attempt['attempts'] >= $maxAttempts && $elapsed >= $blockTime) {
+        $pdo->prepare("DELETE FROM reset_attempts WHERE ip = :ip")->execute([':ip' => $ip]);
+        $attempt = null;
+    }
+}
+
+// ---------------------------------------------------------
+// 4) Récupération du dernier code pour cet email
+// ---------------------------------------------------------
+try {
+    $stmt = $pdo->prepare("
+        SELECT token, expires_at 
+        FROM password_resets 
+        WHERE email = :email 
+        ORDER BY id DESC 
+        LIMIT 1
+    ");
+    $stmt->execute([':email' => $email]);
+    $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Erreur SQL verify-reset-code (select reset): " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(["success" => false, "message" => "Code invalide."]);
+    exit;
+}
+
+// ---------------------------------------------------------
+// 5) Vérification neutre (pas de fuite d'information)
+// ---------------------------------------------------------
+$valid = true;
+
+// Pas de code trouvé
+if (!$reset) {
+    $valid = false;
+}
+
+// Expiré
+elseif (strtotime($reset['expires_at']) < time()) {
+    $valid = false;
+}
+
+// Code incorrect
+elseif ($reset['token'] !== $code) {
+    $valid = false;
+}
+
+// ---------------------------------------------------------
+// 6) Gestion des tentatives
+// ---------------------------------------------------------
+try {
+    if (!$valid) {
+        if ($attempt) {
+            $pdo->prepare("
+                UPDATE reset_attempts 
+                SET attempts = attempts + 1, last_attempt = NOW() 
+                WHERE ip = :ip
+            ")->execute([':ip' => $ip]);
+        } else {
+            $pdo->prepare("
+                INSERT INTO reset_attempts (ip, attempts, last_attempt) 
+                VALUES (:ip, 1, NOW())
+            ")->execute([':ip' => $ip]);
+        }
+
+        echo json_encode(["success" => false, "message" => "Code invalide."]);
+        exit;
+    }
+} catch (PDOException $e) {
+    error_log("Erreur SQL verify-reset-code (update attempts): " . $e->getMessage());
+}
+
+// ---------------------------------------------------------
+// 7) Succès → reset des tentatives
+// ---------------------------------------------------------
+try {
+    $pdo->prepare("DELETE FROM reset_attempts WHERE ip = :ip")->execute([':ip' => $ip]);
+} catch (PDOException $e) {
+    error_log("Erreur SQL verify-reset-code (reset attempts): " . $e->getMessage());
+}
+
+// ---------------------------------------------------------
+// 8) Réponse finale
+// ---------------------------------------------------------
 echo json_encode(["success" => true]);
+exit;
