@@ -1,10 +1,10 @@
 <?php
 // ---------------------------------------------------------
-// LOGIN SÉCURISÉ + ANTI BRUTE-FORCE
+// LOGIN SÉCURISÉ + ANTI BRUTE-FORCE (VERSION BLINDÉE)
 // ---------------------------------------------------------
 
 require_once __DIR__ . "/cors.php";
-require_once __DIR__ . '/db.php';
+require_once __DIR__ . "/db.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -21,8 +21,6 @@ function getUserIP() {
     return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 }
 
-error_log("REMOTE_ADDR = " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
-
 // ---------------------------------------------------------
 // 1) Protection brute-force par IP
 // ---------------------------------------------------------
@@ -35,13 +33,17 @@ $maxAttempts   = 5;        // Nombre max de tentatives
 $blockDuration = 15 * 60;  // 15 minutes
 
 try {
-    $stmt = $pdo->prepare("SELECT attempts, last_attempt FROM login_attempts WHERE ip = :ip");
+    $stmt = $pdo->prepare("
+        SELECT attempts, last_attempt 
+        FROM login_attempts 
+        WHERE ip = :ip
+    ");
     $stmt->execute([':ip' => $ip]);
     $attempt = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("Erreur SQL login_attempts (SELECT): " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Erreur interne."]);
+    echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
     exit;
 }
 
@@ -49,10 +51,11 @@ if ($attempt) {
     $elapsed = time() - strtotime($attempt['last_attempt']);
 
     if ($attempt['attempts'] >= $maxAttempts && $elapsed < $blockDuration) {
-        http_response_code(429);
+        // Blocage actif → réponse neutre
+        http_response_code(401);
         echo json_encode([
             "success" => false,
-            "message" => "Trop de tentatives. Réessayez dans 15 minutes."
+            "message" => "Identifiants incorrects."
         ]);
         exit;
     }
@@ -60,11 +63,14 @@ if ($attempt) {
     // Blocage expiré → reset
     if ($attempt['attempts'] >= $maxAttempts && $elapsed >= $blockDuration) {
         try {
-            $pdo->prepare("DELETE FROM login_attempts WHERE ip = :ip")->execute([':ip' => $ip]);
+            $pdo->prepare("
+                DELETE FROM login_attempts 
+                WHERE ip = :ip
+            ")->execute([':ip' => $ip]);
         } catch (PDOException $e) {
             error_log("Erreur SQL login_attempts (DELETE): " . $e->getMessage());
         }
-        $attempt = null; // on repart propre
+        $attempt = null;
     }
 }
 
@@ -83,27 +89,45 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $raw  = file_get_contents("php://input");
 $data = json_decode($raw);
 
-if (!$data) {
+if (!$data || !is_object($data)) {
     http_response_code(400);
-    echo json_encode(["success" => false, "message" => "JSON invalide."]);
+    echo json_encode(["success" => false, "message" => "Requête invalide."]);
     exit;
 }
 
 // ---------------------------------------------------------
 // 4) Validation des champs
 // ---------------------------------------------------------
-$email    = trim($data->email ?? '');
-$password = $data->password ?? '';
+$emailRaw    = $data->email ?? null;
+$passwordRaw = $data->password ?? null;
 
-if ($email === '' || $password === '') {
+if (!is_string($emailRaw) || !is_string($passwordRaw)) {
     http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Email et mot de passe requis."]);
+    echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
     exit;
 }
 
+$email    = strtolower(trim($emailRaw));
+$password = $passwordRaw;
+
+// Longueurs max
+if (strlen($email) === 0 || strlen($email) > 255 || strlen($password) === 0 || strlen($password) > 255) {
+    http_response_code(401);
+    echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
+    exit;
+}
+
+// Validation email (format)
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Email invalide."]);
+    http_response_code(401);
+    echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
+    exit;
+}
+
+// Optionnel : longueur minimale du mot de passe (8)
+if (strlen($password) < 8) {
+    http_response_code(401);
+    echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
     exit;
 }
 
@@ -122,15 +146,26 @@ try {
 } catch (PDOException $e) {
     error_log("Erreur SQL login (SELECT user): " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Erreur interne."]);
+    echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
     exit;
 }
 
 // ---------------------------------------------------------
-// 6) Vérification de l'existence de l'utilisateur
+// 6) Vérification de l'utilisateur + mot de passe
 // ---------------------------------------------------------
+$valid = true;
+
 if (!$user) {
-    // On compte quand même comme tentative ratée
+    $valid = false;
+} else {
+    $hash = $user['password'] ?? '';
+    if (!is_string($hash) || $hash === '' || !password_verify($password, $hash)) {
+        $valid = false;
+    }
+}
+
+if (!$valid) {
+    // Tentative ratée → incrémenter login_attempts
     try {
         if ($attempt) {
             $pdo->prepare("
@@ -145,7 +180,7 @@ if (!$user) {
             ")->execute([':ip' => $ip]);
         }
     } catch (PDOException $e) {
-        error_log("Erreur SQL login_attempts (user not found): " . $e->getMessage());
+        error_log("Erreur SQL login_attempts (update on fail): " . $e->getMessage());
     }
 
     http_response_code(401);
@@ -154,53 +189,25 @@ if (!$user) {
 }
 
 // ---------------------------------------------------------
-// 7) Vérification du mot de passe
-// ---------------------------------------------------------
-$hash = $user['password'] ?? '';
-
-if (!is_string($hash) || $hash === '' || !password_verify($password, $hash)) {
-    // Mot de passe incorrect → enregistrer la tentative
-    try {
-        if ($attempt) {
-            $pdo->prepare("
-                UPDATE login_attempts 
-                SET attempts = attempts + 1, last_attempt = NOW() 
-                WHERE ip = :ip
-            ")->execute([':ip' => $ip]);
-        } else {
-            $pdo->prepare("
-                INSERT INTO login_attempts (ip, attempts, last_attempt) 
-                VALUES (:ip, 1, NOW())
-            ")->execute([':ip' => $ip]);
-        }
-    } catch (PDOException $e) {
-        error_log("Erreur SQL login_attempts (bad password): " . $e->getMessage());
-    }
-
-    http_response_code(401);
-    echo json_encode(["success" => false, "message" => "Identifiants incorrects."]);
-    exit;
-}
-
-// ---------------------------------------------------------
-// 8) Succès → reset des tentatives + normalisation des données
+// 7) Succès → reset des tentatives + normalisation des données
 // ---------------------------------------------------------
 try {
-    $pdo->prepare("DELETE FROM login_attempts WHERE ip = :ip")->execute([':ip' => $ip]);
+    $pdo->prepare("
+        DELETE FROM login_attempts 
+        WHERE ip = :ip
+    ")->execute([':ip' => $ip]);
 } catch (PDOException $e) {
     error_log("Erreur SQL login_attempts (reset on success): " . $e->getMessage());
 }
 
-// On nettoie les données renvoyées
+// Nettoyage des données renvoyées
 unset($user['password']);
 
 // Normalisation isPaid en entier 0/1
 $user['isPaid'] = ($user['isPaid'] == 1) ? 1 : 0;
 
-// Normalisation du rôle (anti-falsification BDD)
-// Seule la valeur EXACTE 'admin' est acceptée
+// Normalisation du rôle
 $roleFromDb = $user['role'] ?? 'user';
-
 if ($roleFromDb === 'admin') {
     $user['role'] = 'admin';
 } else {
@@ -208,7 +215,7 @@ if ($roleFromDb === 'admin') {
 }
 
 // ---------------------------------------------------------
-// 9) Réponse finale
+// 8) Réponse finale
 // ---------------------------------------------------------
 echo json_encode([
     "success" => true,
