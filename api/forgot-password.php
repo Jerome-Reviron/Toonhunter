@@ -199,19 +199,18 @@ if ($_SERVER['SERVER_NAME'] === 'localhost') {
 }
 
 // ---------------------------------------------------------
-// 10) Mode production : envoi réel via PHPMailer
+// 10) Mode production : envoi réel via PHPMailer (Hostinger)
 // ---------------------------------------------------------
 $mail = new PHPMailer(true);
 
 try {
-    // ⚠️ À adapter avec tes vrais identifiants SMTP
     $mail->isSMTP();
     $mail->Host       = 'smtp.hostinger.com';
     $mail->SMTPAuth   = true;
-    $mail->Username   = 'ton-email@tondomaine.com';
+    $mail->Username   = 'ton-email@tondomaine.com'; // ex: contact@toonhunter.fr
     $mail->Password   = 'TON_MOT_DE_PASSE_SMTP';
-    $mail->SMTPSecure = 'tls';
-    $mail->Port       = 587;
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // SSL
+    $mail->Port       = 465;
 
     $mail->setFrom('noreply@tondomaine.com', 'ToonHunter');
     $mail->addAddress($email);
