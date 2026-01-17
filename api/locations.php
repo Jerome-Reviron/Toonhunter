@@ -4,12 +4,10 @@ require_once __DIR__ . "/cors.php";
 require_once __DIR__ . '/db.php';
 
 header("Content-Type: application/json; charset=UTF-8");
-// Autoriser les requêtes CORS
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 
-// Répondre à la requête OPTIONS (preflight)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -46,25 +44,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 // ---------------------------------------------------------
-// 🔒 Fonction : vérifier si un userId est admin
+// 🔒 Fonction : vérifier si un userId est admin (VERSION BLINDÉE)
 // ---------------------------------------------------------
-function requireAdmin($pdo, $userId) {
-    if (!$userId) {
+function requireAdmin(PDO $pdo, $userId)
+{
+    // 1) Vérification userId valide
+    $userId = intval($userId);
+    if ($userId <= 0) {
         http_response_code(401);
-        echo json_encode(["success" => false, "message" => "Utilisateur non authentifié."]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Utilisateur non authentifié."
+        ]);
         exit;
     }
 
-    $stmt = $pdo->prepare("SELECT role FROM users WHERE id = :id LIMIT 1");
-    $stmt->execute([':id' => $userId]);
-    $u = $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        // 2) Vérification en base
+        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Erreur SQL requireAdmin: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "message" => "Erreur interne."
+        ]);
+        exit;
+    }
 
-    $role = strtolower(trim($u['role'] ?? 'user'));
+    // 3) Aucun utilisateur trouvé
+    if (!$user) {
+        http_response_code(403);
+        echo json_encode([
+            "success" => false,
+            "message" => "Accès refusé."
+        ]);
+        exit;
+    }
+
+    // 4) Vérification du rôle
+    $role = strtolower(trim($user['role']));
     if ($role !== 'admin') {
         http_response_code(403);
-        echo json_encode(["success" => false, "message" => "Accès refusé : droits administrateur requis."]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Accès refusé : droits administrateur requis."
+        ]);
         exit;
     }
+
+    return true;
 }
 
 // ---------------------------------------------------------
@@ -85,17 +116,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userId = intval($data->userId ?? 0);
     requireAdmin($pdo, $userId);
 
+    // 🔥 Lecture des champs EXACTEMENT comme ton JSON POST
     $name          = trim($data->name ?? '');
     $description   = trim($data->description ?? '');
     $characterName = trim($data->characterName ?? '');
-    $lat           = $data->coordinates->latitude  ?? null;
-    $lng           = $data->coordinates->longitude ?? null;
-    $radius        = $data->radiusMeters ?? null;
+
+    // 🔥 Coordinates (format officiel)
+    $lat = isset($data->coordinates->latitude) ? (float)$data->coordinates->latitude : null;
+    $lng = isset($data->coordinates->longitude) ? (float)$data->coordinates->longitude : null;
+
+    // 🔥 radiusMeters
+    $radius        = isset($data->radiusMeters) ? (int)$data->radiusMeters : null;
+
     $promptContext = trim($data->promptContext ?? '');
     $imageUrl      = trim($data->imageUrl ?? '');
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
 
+    // 🔥 Validation stricte
     if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Données obligatoires manquantes."]);
@@ -114,9 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':name'              => $name,
             ':description'       => $description,
             ':characterName'     => $characterName,
-            ':lat'               => (float)$lat,
-            ':lng'               => (float)$lng,
-            ':radius'            => (int)$radius,
+            ':lat'               => $lat,
+            ':lng'               => $lng,
+            ':radius'            => $radius,
             ':promptContext'     => $promptContext,
             ':imageUrl'          => $imageUrl,
             ':rarity'            => $rarity,
@@ -152,6 +190,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $userId = intval($data->userId ?? 0);
     requireAdmin($pdo, $userId);
 
+    // 🔥 Lecture EXACTE selon ton JSON POST/PUT
+    $name          = trim($data->name ?? '');
+    $description   = trim($data->description ?? '');
+    $characterName = trim($data->characterName ?? '');
+
+    // 🔥 Coordinates (format officiel)
+    $lat = isset($data->coordinates->latitude) ? (float)$data->coordinates->latitude : null;
+    $lng = isset($data->coordinates->longitude) ? (float)$data->coordinates->longitude : null;
+
+    $radius        = isset($data->radiusMeters) ? (int)$data->radiusMeters : null;
+    $promptContext = trim($data->promptContext ?? '');
+    $imageUrl      = trim($data->imageUrl ?? '');
+    $rarity        = trim($data->rarity ?? '');
+    $validationKeywords = trim($data->validationKeywords ?? '');
+
+    // 🔥 Validation stricte
+    if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "message" => "Données obligatoires manquantes."]);
+        return;
+    }
+
     try {
         $stmt = $pdo->prepare("
             UPDATE locations SET
@@ -170,16 +230,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 
         $stmt->execute([
             ':id'                => $data->id,
-            ':name'              => $data->name,
-            ':description'       => $data->description,
-            ':characterName'     => $data->characterName,
-            ':lat'               => $data->coordinates->latitude,
-            ':lng'               => $data->coordinates->longitude,
-            ':radius'            => $data->radiusMeters,
-            ':promptContext'     => $data->promptContext,
-            ':imageUrl'          => $data->imageUrl,
-            ':rarity'            => $data->rarity,
-            ':validationKeywords'=> $data->validationKeywords
+            ':name'              => $name,
+            ':description'       => $description,
+            ':characterName'     => $characterName,
+            ':lat'               => $lat,
+            ':lng'               => $lng,
+            ':radius'            => $radius,
+            ':promptContext'     => $promptContext,
+            ':imageUrl'          => $imageUrl,
+            ':rarity'            => $rarity,
+            ':validationKeywords'=> $validationKeywords
         ]);
 
         echo json_encode(["success" => true]);
@@ -198,21 +258,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
+    // Lecture des paramètres dans l'URL
     parse_str($_SERVER['QUERY_STRING'], $query);
 
+    // Vérification ID
     if (!isset($query['id'])) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "ID manquant."]);
         return;
     }
 
-    // 🔒 Vérification admin
+    // Vérification admin
     $userId = intval($query['userId'] ?? 0);
     requireAdmin($pdo, $userId);
 
+    $id = intval($query['id']);
+
     try {
         $stmt = $pdo->prepare("DELETE FROM locations WHERE id = :id");
-        $stmt->execute([':id' => $query['id']]);
+        $stmt->execute([':id' => $id]);
 
         echo json_encode(["success" => true]);
         return;
@@ -225,9 +289,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     }
 }
 
-// ---------------------------------------------------------
-// Méthode non autorisée
-// ---------------------------------------------------------
 http_response_code(405);
 echo json_encode(["success" => false, "message" => "Méthode non autorisée."]);
-
