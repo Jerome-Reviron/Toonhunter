@@ -24,12 +24,12 @@ import {
   Download,
   Sparkles,
   AlertTriangle,
-  RefreshCcw,
   Navigation2,
   Radar,
   CircleDot,
   CircleHelp,
   Loader2,
+  Send,
 } from "lucide-react";
 
 const App: React.FC = () => {
@@ -362,6 +362,27 @@ const App: React.FC = () => {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      // Préparation du fichier à partager
+      const response = await fetch(analysisResult!.processedImage);
+      const blob = await response.blob();
+      const file = new File([blob], "toonhunter.jpg", { type: "image/jpeg" });
+
+      if (navigator.share) {
+        await navigator.share({
+          title: "ToonHunter",
+          text: analysisResult!.quote,
+          files: [file],
+        });
+      } else {
+        alert("Le partage n'est pas supporté sur cet appareil.");
+      }
+    } catch (e) {
+      console.error("Erreur partage:", e);
+    }
+  };
+
   // ---------------------------------------------------------
   // UI rendering
   // ---------------------------------------------------------
@@ -586,7 +607,6 @@ const App: React.FC = () => {
             </p>{" "}
           </div>{" "}
           <div className="grid grid-cols-2 gap-3">
-            {" "}
             <button
               onClick={() =>
                 downloadImage(
@@ -594,19 +614,24 @@ const App: React.FC = () => {
                   selectedTarget?.characterName || "Toon",
                 )
               }
-              className="py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-white/20"
+              className="w-[150px] px-6 py-4 bg-white/10 border border-white/20 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all hover:bg-white/20 flex items-center justify-center gap-2"
             >
-              {" "}
-              <Download className="w-5 h-5" /> Télécharger{" "}
-            </button>{" "}
+              <Download className="w-5 h-5 shrink-0" />
+              <span className="text-[15px] leading-none font-black tracking-wide">
+                Télécharger
+              </span>
+            </button>
+
             <button
-              onClick={handleFinish}
-              className="py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-black uppercase text-white shadow-lg active:scale-95 transition-all"
+              onClick={handleShare}
+              className="w-[150px] px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              {" "}
-              Terminer{" "}
-            </button>{" "}
-          </div>{" "}
+              <Send className="w-5 h-5 shrink-0" />
+              <span className="text-[15px] leading-none font-black tracking-wide">
+                Partager
+              </span>
+            </button>
+          </div>
         </div>{" "}
       </div>
     );
@@ -943,7 +968,7 @@ const App: React.FC = () => {
       </main>
 
       {showViewer.isOpen && showViewer.item && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col">
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col overflow-y-auto">
           <div className="p-6 flex justify-between items-center bg-black/50 border-b border-white/10">
             <h3 className="font-display font-black text-xl text-white">
               {showViewer.target?.characterName}
@@ -955,7 +980,7 @@ const App: React.FC = () => {
               <X />
             </button>
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6 overflow-y-auto">
+          <div className="flex-1 flex flex-col items-center p-6 gap-6">
             <img
               src={`data:image/jpeg;base64,${showViewer.item.photoUrl}`}
               className="max-w-full max-h-[70vh] rounded-3xl shadow-2xl border border-white/20 object-contain"
@@ -970,7 +995,7 @@ const App: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="p-8 grid grid-cols-2 gap-4 bg-black/50 border-t border-white/10">
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() =>
                 downloadImage(
@@ -978,15 +1003,22 @@ const App: React.FC = () => {
                   showViewer.target?.characterName || "Toon",
                 )
               }
-              className="py-4 bg-white text-black font-black uppercase text-xs rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl"
+              className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all hover:bg-white/20 flex items-center justify-center gap-2"
             >
-              <Download className="w-5 h-5" /> Enregistrer
+              <Download className="w-5 h-5 shrink-0" />
+              <span className="text-[15px] leading-none font-black tracking-wide">
+                Télécharger
+              </span>
             </button>
+
             <button
-              onClick={() => setShowViewer({ isOpen: false })}
-              className="py-4 bg-white/10 text-white font-bold uppercase text-xs rounded-2xl border border-white/20 active:scale-95 transition-all hover:bg-white/20"
+              onClick={handleShare}
+              className="w-full px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              Fermer
+              <Send className="w-5 h-5 shrink-0" />
+              <span className="text-[15px] leading-none font-black tracking-wide">
+                Partager
+              </span>
             </button>
           </div>
         </div>
