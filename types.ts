@@ -32,7 +32,7 @@ export interface LocationTarget {
   validationKeywords?: string;
   imageUrl: string;
   rarity: "Commune" | "Rare" | "Légendaire";
-  isFree?: boolean;
+  free: number;
 }
 
 export enum AppState {

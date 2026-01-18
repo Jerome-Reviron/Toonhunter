@@ -14,13 +14,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 // ---------------------------------------------------------
-// 2) Récupération et validation du user_id
+// 2) Récupération et validation du userId
 // ---------------------------------------------------------
-$userId = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
+$userId = isset($_GET['userId']) ? intval($_GET['userId']) : 0;
 
 if ($userId <= 0) {
     http_response_code(400);
-    echo json_encode(["success" => false, "message" => "user_id invalide."]);
+    echo json_encode(["success" => false, "message" => "userId invalide."]);
     return;
 }
 

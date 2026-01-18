@@ -37,11 +37,11 @@ const App: React.FC = () => {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [locations, setLocations] = useState<LocationTarget[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<LocationTarget | null>(
-    null
+    null,
   );
   const [appState, setAppState] = useState<AppState>(AppState.SPLASH);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
-    null
+    null,
   );
   const [showViewer, setShowViewer] = useState<{
     isOpen: boolean;
@@ -49,10 +49,10 @@ const App: React.FC = () => {
     target?: LocationTarget;
   }>({ isOpen: false });
   const [collection, setCollection] = useState<Record<string, CollectionItem>>(
-    {}
+    {},
   );
   const [currentTab, setCurrentTab] = useState<"map" | "collection" | "admin">(
-    "map"
+    "map",
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(10);
@@ -103,39 +103,57 @@ const App: React.FC = () => {
   const handleNativeCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64Full = ev.target?.result as string;
       e.target.value = "";
+
+      // Compression
       const compressedFull = await compressBase64(base64Full, 0.6);
-      const base64 = compressedFull.split(",")[1];
+
+      // 🔥 Correction : enlever le header SEULEMENT s'il existe
+      const base64 = compressedFull.includes(",")
+        ? compressedFull.split(",")[1]
+        : compressedFull;
+
       handleCapture(base64);
     };
+
     reader.readAsDataURL(file);
   };
 
   const handleCapture = async (base64Image: string) => {
     if (!selectedTarget || !user) return;
-    // ---------------------------------------------------------
-    // 🚨 Vérification premium CÔTÉ BACKEND AVANT TOUT
-    // ---------------------------------------------------------
-    try {
-      const res = await fetch(`/api/check_premium.php?user_id=${user.id}`);
-      const data = await res.json();
 
-      if (!res.ok || !data.success || data.isPaid !== 1) {
-        setErrorMessage("Accès premium requis.");
+    // ---------------------------------------------------------
+    // 🚨 Vérification premium CÔTÉ FRONT
+    // ---------------------------------------------------------
+
+    // Si la location est gratuite → pas besoin de premium
+    if (selectedTarget.free === 1) {
+      console.log("Lieu gratuit → capture autorisée sans premium");
+      await new Promise((r) => setTimeout(r, 200));
+    } else {
+      // Sinon → vérifier premium côté backend
+      try {
+        const res = await fetch(`/api/check_premium.php?userId=${user.id}`);
+        const data = await res.json();
+
+        if (!res.ok || !data.success || data.isPaid !== 1) {
+          setErrorMessage("Accès premium requis.");
+          setAppState(AppState.ERROR);
+          return;
+        }
+      } catch (e) {
+        console.error("Erreur check_premium:", e);
+        setErrorMessage("Erreur de vérification de l'accès premium.");
         setAppState(AppState.ERROR);
         return;
       }
-    } catch (e) {
-      console.error("Erreur check_premium:", e);
-      setErrorMessage("Erreur de vérification de l'accès premium.");
-      setAppState(AppState.ERROR);
-      return;
     }
 
-    // 🔥 Si premium confirmé PAR LA BDD → on peut lancer le workflow
+    // 🔥 Si premium confirmé OU lieu gratuit → on peut lancer le workflow
     setCountdown(10);
     setIsDataReady(false);
     setAppState(AppState.ANALYZING);
@@ -147,7 +165,7 @@ const App: React.FC = () => {
         user.id,
         selectedTarget.id,
         result.image,
-        result.quote
+        result.quote,
       );
 
       if (!savedItem) {
@@ -172,7 +190,6 @@ const App: React.FC = () => {
       setAppState(AppState.ERROR);
     }
   };
-
   // ---------------------------------------------------------
   // Empêcher le reload automatique après capture (Android / Chrome bug)
   // ---------------------------------------------------------
@@ -201,7 +218,7 @@ const App: React.FC = () => {
   // Chargement des données du parc
   // ---------------------------------------------------------
   useEffect(() => {
-    if (user && appState === AppState.LIST) {
+    if (appState === AppState.LIST && user) {
       const loadData = async () => {
         try {
           const [locs, col] = await Promise.all([
@@ -216,23 +233,32 @@ const App: React.FC = () => {
       };
       loadData();
     }
-  }, [user, appState]);
+  }, [appState]); // ❗ user retiré
 
   // ---------------------------------------------------------
-  // GPS
+  // GPS (corrigé pour éviter les micro-rerenders inutiles)
   // ---------------------------------------------------------
   useEffect(() => {
-    // 🔥 Pendant l'écran ANALYZING, on ne met pas à jour le GPS
-    if (appState === AppState.ANALYZING) {
-      return;
-    }
+    // 🔒 On bloque toute mise à jour GPS pendant l’analyse
+    if (appState === AppState.ANALYZING) return;
 
+    // ✅ Si l’utilisateur est connecté et que le GPS est dispo
     if (user && "geolocation" in navigator) {
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          setUserLocation({
+          const newCoords = {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
+          };
+
+          // 🧠 Vérifie si la position a réellement changé (tolérance ≈ 1 mètre)
+          setUserLocation((prev) => {
+            const hasChanged =
+              !prev ||
+              Math.abs(prev.latitude - newCoords.latitude) > 0.00001 ||
+              Math.abs(prev.longitude - newCoords.longitude) > 0.00001;
+
+            return hasChanged ? newCoords : prev;
           });
         },
         (err) => console.error("GPS Error:", err),
@@ -240,12 +266,13 @@ const App: React.FC = () => {
           enableHighAccuracy: true,
           timeout: 20000,
           maximumAge: 0,
-        }
+        },
       );
 
+      // 🧹 Nettoyage du watcher GPS à chaque changement d’état
       return () => navigator.geolocation.clearWatch(watchId);
     }
-  }, [user, appState]);
+  }, [appState]);
 
   // ---------------------------------------------------------
   // SPLASH SCREEN → transition automatique
@@ -277,16 +304,24 @@ const App: React.FC = () => {
   const handleFinish = async () => {
     if (!user) return;
 
+    // 1) Recharge la collection AVANT de quitter RESULT
     try {
-      const res = await fetch(`/api/get_user_refresh.php?user_id=${user.id}`);
+      const freshCollection = await collectionService.getUserCollection(
+        user.id,
+      );
+      setCollection(freshCollection);
+    } catch (e) {
+      console.error("Erreur refresh collection:", e);
+    }
+
+    // 2) Refresh user (optionnel)
+    try {
+      const res = await fetch(`/api/get_user_refresh.php?userId=${user.id}`);
       const data = await res.json();
 
       if (data.success && data.user) {
         const refreshed = data.user;
-
-        // 🔥 Normalisation du type (évite 100% des bugs TS et premium)
         refreshed.isPaid = Number(refreshed.isPaid);
-
         setUser(refreshed);
         localStorage.setItem("toonhunter_session", JSON.stringify(refreshed));
       }
@@ -294,7 +329,7 @@ const App: React.FC = () => {
       console.error("Erreur refresh user:", e);
     }
 
-    // 🔄 Reset de l’app
+    // 3) Reset UI
     setSelectedTarget(null);
     setAppState(AppState.LIST);
     setErrorMessage(null);
@@ -467,8 +502,8 @@ const App: React.FC = () => {
               {countdown > 0
                 ? `Invocation de ${selectedTarget?.characterName}...`
                 : isDataReady
-                ? "La magie est prête !"
-                : "Encore un instant..."}
+                  ? "La magie est prête !"
+                  : "Encore un instant..."}
             </p>
           </div>
 
@@ -556,7 +591,7 @@ const App: React.FC = () => {
               onClick={() =>
                 downloadImage(
                   analysisResult.processedImage,
-                  selectedTarget?.characterName || "Toon"
+                  selectedTarget?.characterName || "Toon",
                 )
               }
               className="py-4 bg-white/10 border border-white/20 rounded-xl font-bold uppercase text-white flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-white/20"
@@ -665,7 +700,7 @@ const App: React.FC = () => {
                 onClick={async () => {
                   // Vérification en BDD AVANT d’ouvrir le panel admin
                   const res = await fetch(
-                    `/api/get_user_refresh.php?user_id=${user.id}`
+                    `/api/get_user_refresh.php?userId=${user.id}`,
                   );
                   const data = await res.json();
 
@@ -760,10 +795,7 @@ const App: React.FC = () => {
                   location={loc}
                   userCoords={userLocation}
                   isCollected={!!collection[loc.id]}
-                  hasAccess={
-                    user?.isPaid === 1 ||
-                    locations.slice(0, 3).some((l) => l.id === loc.id)
-                  }
+                  hasAccess={user?.isPaid === 1 || loc.free === 1}
                   onSelect={(t) => {
                     if (collection[t.id]) {
                       setCurrentTab("collection");
@@ -772,12 +804,12 @@ const App: React.FC = () => {
 
                     // 👉 Détection mobile
                     const isMobile = /Android|iPhone|iPad|iPod/i.test(
-                      navigator.userAgent
+                      navigator.userAgent,
                     );
 
                     if (!isMobile) {
                       setErrorMessage(
-                        "La capture n’est possible que depuis un appareil mobile."
+                        "La capture n’est possible que depuis un appareil mobile.",
                       );
                       setAppState(AppState.ERROR);
                       return;
@@ -806,8 +838,8 @@ const App: React.FC = () => {
                   loc.rarity === "Légendaire"
                     ? "text-amber-400"
                     : loc.rarity === "Rare"
-                    ? "text-purple-400"
-                    : "text-blue-400";
+                      ? "text-purple-400"
+                      : "text-blue-400";
 
                 return (
                   <div
@@ -943,7 +975,7 @@ const App: React.FC = () => {
               onClick={() =>
                 downloadImage(
                   showViewer.item!.photoUrl,
-                  showViewer.target?.characterName || "Toon"
+                  showViewer.target?.characterName || "Toon",
                 )
               }
               className="py-4 bg-white text-black font-black uppercase text-xs rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl"
