@@ -76,11 +76,11 @@ export const locationService = {
   // ---------------------------------------------------------
   // DELETE : supprimer une location
   // ---------------------------------------------------------
-  delete: async (id: string | number): Promise<void> => {
-    if (API_CONFIG.USE_MOCK_DATA) return;
-
-    const response = await fetch("/api/locations.php?id=${id}", {
+  delete: async (id: number, userId: number) => {
+    const response = await fetch("/api/locations.php", {
       method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, userId }),
     });
 
     const data = await response.json();
@@ -88,5 +88,7 @@ export const locationService = {
     if (!data.success) {
       throw new Error("Erreur suppression lieu");
     }
+
+    return true;
   },
 };

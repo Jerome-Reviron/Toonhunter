@@ -131,7 +131,7 @@ const App: React.FC = () => {
     // ---------------------------------------------------------
 
     // Si la location est gratuite → pas besoin de premium
-    if (selectedTarget.free === 1) {
+    if (selectedTarget.free) {
       console.log("Lieu gratuit → capture autorisée sans premium");
       await new Promise((r) => setTimeout(r, 200));
     } else {
@@ -820,7 +820,7 @@ const App: React.FC = () => {
                   location={loc}
                   userCoords={userLocation}
                   isCollected={!!collection[loc.id]}
-                  hasAccess={user?.isPaid === 1 || loc.free === 1}
+                  hasAccess={user?.isPaid === 1 || loc.free}
                   onSelect={(t) => {
                     if (collection[t.id]) {
                       setCurrentTab("collection");
@@ -957,12 +957,18 @@ const App: React.FC = () => {
             }}
             onUpdateLocation={async (l) => {
               await locationService.update(l);
+
+              // 👉 Mise à jour du state React
+              setLocations((prev) =>
+                prev.map((loc) => (loc.id === l.id ? { ...loc, ...l } : loc)),
+              );
             }}
             onDeleteLocation={async (id) => {
-              await locationService.delete(id);
+              await locationService.delete(Number(id), Number(user.id));
               setLocations(locations.filter((x) => x.id !== id));
             }}
             onClose={() => setCurrentTab("map")}
+            userId={user.id}
           />
         )}
       </main>

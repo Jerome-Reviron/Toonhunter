@@ -40,16 +40,33 @@ export const authService = {
         return user;
       } catch (error: any) {
         throw new Error(
-          error.message || "Impossible de contacter le serveur Laragon."
+          error.message || "Impossible de contacter le serveur Laragon.",
         );
       }
     }
   },
 
+  refreshUser: async (userId: number): Promise<User> => {
+    const response = await fetch(`/api/get_user_refresh.php?userId=${userId}`);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(
+        data.message || "Impossible de rafraîchir l'utilisateur.",
+      );
+    }
+
+    const user = data.user;
+    user.isPaid = Number(user.isPaid); // normalisation obligatoire
+
+    localStorage.setItem("toonhunter_session", JSON.stringify(user));
+    return user;
+  },
+
   register: async (
     pseudo: string,
     email: string,
-    password: string
+    password: string,
   ): Promise<void> => {
     const response = await fetch("/api/register.php", {
       method: "POST",
@@ -96,7 +113,7 @@ export const authService = {
   resetPassword: async (
     email: string,
     code: string,
-    password: string
+    password: string,
   ): Promise<void> => {
     const response = await fetch("/api/reset-password.php", {
       method: "POST",
@@ -107,7 +124,7 @@ export const authService = {
     const data = await response.json();
     if (!data.success) {
       throw new Error(
-        data.message || "Impossible de réinitialiser le mot de passe."
+        data.message || "Impossible de réinitialiser le mot de passe.",
       );
     }
   },

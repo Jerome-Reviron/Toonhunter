@@ -35,6 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'longitude' => isset($loc['longitude']) ? (float)$loc['longitude'] : null,
         ];
         $loc['radiusMeters'] = isset($loc['radiusMeters']) ? (int)$loc['radiusMeters'] : 0;
+        $loc['free'] = isset($loc['free']) ? (bool)$loc['free'] : false;
+
     }
 
     error_log(">>> [Location] GET terminé, " . count($locations) . " lieux renvoyés");
@@ -132,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $imageUrl      = trim($data->imageUrl ?? '');
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
+    $free = isset($data->free) ? (int)$data->free : 0;
 
     // 🔥 Validation stricte
     if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
@@ -143,9 +146,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $stmt = $pdo->prepare("
             INSERT INTO locations 
-                (name, description, characterName, latitude, longitude, radiusMeters, promptContext, imageUrl, rarity, validationKeywords) 
+                (name, description, characterName, latitude, longitude, radiusMeters, promptContext, imageUrl, rarity, validationKeywords, free) 
             VALUES 
-                (:name, :description, :characterName, :lat, :lng, :radius, :promptContext, :imageUrl, :rarity, :validationKeywords)
+                (:name, :description, :characterName, :lat, :lng, :radius, :promptContext, :imageUrl, :rarity, :validationKeywords, :free)
         ");
 
         $stmt->execute([
@@ -158,7 +161,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':promptContext'     => $promptContext,
             ':imageUrl'          => $imageUrl,
             ':rarity'            => $rarity,
-            ':validationKeywords'=> $validationKeywords
+            ':validationKeywords'=> $validationKeywords,
+            ':free' => $free
         ]);
 
         echo json_encode(["success" => true, "id" => (int)$pdo->lastInsertId()]);
@@ -204,6 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $imageUrl      = trim($data->imageUrl ?? '');
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
+    $free = isset($data->free) ? (int)$data->free : 0;
 
     // 🔥 Validation stricte
     if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
@@ -224,7 +229,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                 promptContext = :promptContext,
                 imageUrl = :imageUrl,
                 rarity = :rarity,
-                validationKeywords = :validationKeywords
+                validationKeywords = :validationKeywords,
+                free = :free
             WHERE id = :id
         ");
 
@@ -239,7 +245,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             ':promptContext'     => $promptContext,
             ':imageUrl'          => $imageUrl,
             ':rarity'            => $rarity,
-            ':validationKeywords'=> $validationKeywords
+            ':validationKeywords'=> $validationKeywords,
+            ':free' => $free
         ]);
 
         echo json_encode(["success" => true]);
@@ -258,21 +265,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 
-    // Lecture des paramètres dans l'URL
-    parse_str($_SERVER['QUERY_STRING'], $query);
+    // Lecture du JSON envoyé par le frontend
+    $raw = file_get_contents("php://input");
+    $data = json_decode($raw);
 
     // Vérification ID
-    if (!isset($query['id'])) {
+    if (!$data || !isset($data->id)) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "ID manquant."]);
         return;
     }
 
-    // Vérification admin
-    $userId = intval($query['userId'] ?? 0);
+    // 🔒 Vérification admin (même logique que POST et PUT)
+    $userId = intval($data->userId ?? 0);
     requireAdmin($pdo, $userId);
 
-    $id = intval($query['id']);
+    $id = intval($data->id);
 
     try {
         $stmt = $pdo->prepare("DELETE FROM locations WHERE id = :id");

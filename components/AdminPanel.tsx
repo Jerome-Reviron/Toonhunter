@@ -22,6 +22,7 @@ interface AdminPanelProps {
   onUpdateLocation: (location: LocationTarget) => Promise<void>;
   onDeleteLocation: (id: string | number) => Promise<void>;
   onClose: () => void;
+  userId: number | string;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -31,6 +32,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onUpdateLocation,
   onDeleteLocation,
   onClose,
+  userId,
 }) => {
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [saving, setSaving] = useState(false); // Loading state
@@ -44,17 +46,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [keywords, setKeywords] = useState("");
   const [imageBase64, setImageBase64] = useState<string>("");
   const [rarity, setRarity] = useState<"Commune" | "Rare" | "Légendaire">(
-    "Commune"
+    "Commune",
   );
   const [radius, setRadius] = useState<number>(50);
   const [promptContext, setPromptContext] = useState("");
-
+  const [free, setFree] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!promptContext && !editingId) {
       setPromptContext(
-        "A friendly 3D CGI LION with a golden mane. He is standing BEHIND the human subject, peeking over their shoulder. The person blocks part of the lion's body. Realistic fur, bright eyes, Pixar style. NOT a monster, but a Lion."
+        "A friendly 3D CGI LION with a golden mane. He is standing BEHIND the human subject, peeking over their shoulder. The person blocks part of the lion's body. Realistic fur, bright eyes, Pixar style. NOT a monster, but a Lion.",
       );
     }
   }, []);
@@ -77,7 +79,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     if (!editingId && characterName.length > 2) {
       const timeoutId = setTimeout(
         () => generateSmartPrompt(characterName),
-        500
+        500,
       );
       return () => clearTimeout(timeoutId);
     }
@@ -138,6 +140,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setImageBase64(loc.imageUrl);
     setRarity(loc.rarity);
     setRadius(loc.radiusMeters || 50);
+    setFree(Boolean(loc.free));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -150,6 +153,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setImageBase64("");
     setRarity("Commune");
     setRadius(50);
+    setFree(false);
     generateSmartPrompt("CHARACTER");
     if (userLocation) {
       setLat(userLocation.latitude.toFixed(7));
@@ -165,8 +169,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
     setSaving(true);
 
-    const locationData: LocationTarget = {
+    const locationData = {
       id: editingId || Date.now().toString(),
+      userId,
       name,
       description,
       coordinates: { latitude: parseFloat(lat), longitude: parseFloat(lng) },
@@ -177,7 +182,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       imageUrl:
         imageBase64 ||
         "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-      rarity: rarity,
+      rarity,
+      free,
     };
 
     try {
@@ -438,7 +444,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </p>
             </div>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Accès au point
+            </label>
 
+            <div className="flex items-center gap-4 bg-black/40 border border-white/20 rounded-lg p-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="free"
+                  checked={free === true}
+                  onChange={() => setFree(true)}
+                  className="accent-pink-500"
+                />
+                <span className="text-sm">Gratuit</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="free"
+                  checked={free === false}
+                  onChange={() => setFree(false)}
+                  className="accent-pink-500"
+                />
+                <span className="text-sm">Payant</span>
+              </label>
+            </div>
+          </div>
           <div className="flex gap-4">
             {editingId && (
               <button
@@ -479,8 +513,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 loc.rarity === "Légendaire"
                   ? "text-amber-400"
                   : loc.rarity === "Rare"
-                  ? "text-purple-400"
-                  : "text-blue-400";
+                    ? "text-purple-400"
+                    : "text-blue-400";
               return (
                 <div
                   key={loc.id}
@@ -508,6 +542,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </p>
                       <p className="text-xs text-gray-400 mb-1 truncate">
                         {loc.description}
+                      </p>
+                      <p
+                        className={`text-xs font-bold ${
+                          loc.free ? "text-green-400" : "text-red-400"
+                        }`}
+                      >
+                        {loc.free ? "Gratuit" : "Payant"}
                       </p>
                     </div>
                   </div>
