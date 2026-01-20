@@ -4,28 +4,31 @@ import { TARGET_LOCATIONS } from "../constants";
 
 export const locationService = {
   // ---------------------------------------------------------
-  // GET : récupérer toutes les locations
+  // GET : récupérer les locations d’un parc
   // ---------------------------------------------------------
-  getAll: async (): Promise<LocationTarget[]> => {
+  getAll: async (parcId?: number): Promise<LocationTarget[]> => {
     if (API_CONFIG.USE_MOCK_DATA) {
       return TARGET_LOCATIONS;
     }
 
     try {
-      const response = await fetch("/api/locations.php");
+      const url = parcId
+        ? `/api/locations.php?parc_id=${parcId}`
+        : `/api/locations.php`;
+
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Erreur chargement lieux");
 
       const data = await response.json();
 
-      // Nouveau format backend : { success: true, locations: [...] }
       if (data.success && Array.isArray(data.locations)) {
         return data.locations;
       }
 
-      return TARGET_LOCATIONS;
+      return [];
     } catch (e) {
-      console.error("Erreur API Locations, fallback to constants:", e);
-      return TARGET_LOCATIONS;
+      console.error("Erreur API Locations:", e);
+      return [];
     }
   },
 

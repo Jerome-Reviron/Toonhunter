@@ -14,14 +14,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // ---------------------------------------------------------
-// GET : récupérer toutes les locations (PUBLIC)
+// GET : récupérer les locations (PUBLIC + filtrage par parc)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     error_log(">>> [Location] GET reçu");
 
     try {
-        $stmt = $pdo->query("SELECT * FROM locations");
+        // 🔥 Filtrage par parc si parc_id est présent dans l'URL
+        if (isset($_GET['parc_id'])) {
+            $pid = intval($_GET['parc_id']);
+
+            if ($pid <= 0) {
+                http_response_code(400);
+                echo json_encode(["success" => false, "message" => "parc_id invalide."]);
+                return;
+            }
+
+            $stmt = $pdo->prepare("SELECT * FROM locations WHERE parc_id = :pid");
+            $stmt->execute([':pid' => $pid]);
+        } else {
+            // 🔥 AdminPanel ou fallback → renvoie tout
+            $stmt = $pdo->query("SELECT * FROM locations");
+        }
+
         $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     } catch (PDOException $e) {
         error_log("Erreur SQL GET locations: " . $e->getMessage());
         http_response_code(500);
@@ -29,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         return;
     }
 
+    // 🔥 Normalisation des champs
     foreach ($locations as &$loc) {
         $loc['coordinates'] = [
             'latitude'  => isset($loc['latitude'])  ? (float)$loc['latitude']  : null,
@@ -36,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
         $loc['radiusMeters'] = isset($loc['radiusMeters']) ? (int)$loc['radiusMeters'] : 0;
         $loc['free'] = isset($loc['free']) ? (bool)$loc['free'] : false;
-
     }
 
     error_log(">>> [Location] GET terminé, " . count($locations) . " lieux renvoyés");
@@ -135,6 +152,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
     $free = isset($data->free) ? (int)$data->free : 0;
+    $parcId = isset($data->parc_id) ? intval($data->parc_id) : null;
+
 
     // 🔥 Validation stricte
     if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
@@ -143,12 +162,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         return;
     }
 
+    if ($parcId !== null && $parcId <= 0) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "message" => "parc_id invalide."]);
+        return;
+    }
+
     try {
         $stmt = $pdo->prepare("
             INSERT INTO locations 
-                (name, description, characterName, latitude, longitude, radiusMeters, promptContext, imageUrl, rarity, validationKeywords, free) 
+                (name, description, characterName, latitude, longitude, radiusMeters, promptContext, imageUrl, rarity, validationKeywords, free, parc_id) 
             VALUES 
-                (:name, :description, :characterName, :lat, :lng, :radius, :promptContext, :imageUrl, :rarity, :validationKeywords, :free)
+                (:name, :description, :characterName, :lat, :lng, :radius, :promptContext, :imageUrl, :rarity, :validationKeywords, :free, :parc_id)
         ");
 
         $stmt->execute([
@@ -162,7 +187,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':imageUrl'          => $imageUrl,
             ':rarity'            => $rarity,
             ':validationKeywords'=> $validationKeywords,
-            ':free' => $free
+            ':free' => $free,
+            ':parc_id' => $parcId
         ]);
 
         echo json_encode(["success" => true, "id" => (int)$pdo->lastInsertId()]);
@@ -209,6 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
     $free = isset($data->free) ? (int)$data->free : 0;
+    $parcId = isset($data->parc_id) ? intval($data->parc_id) : null;
 
     // 🔥 Validation stricte
     if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
@@ -230,7 +257,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                 imageUrl = :imageUrl,
                 rarity = :rarity,
                 validationKeywords = :validationKeywords,
-                free = :free
+                free = :free,
+                parc_id = :parc_id
             WHERE id = :id
         ");
 
@@ -246,7 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
             ':imageUrl'          => $imageUrl,
             ':rarity'            => $rarity,
             ':validationKeywords'=> $validationKeywords,
-            ':free' => $free
+            ':free'              => $free, 
+            ':parc_id'           => $parcId
         ]);
 
         echo json_encode(["success" => true]);

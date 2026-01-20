@@ -15,6 +15,7 @@ import { locationService } from "./services/locationService";
 import { collectionService } from "./services/collectionService";
 import { generateCharacterPhoto } from "./services/geminiService";
 import SplashScreen from "./components/SplashScreen/SplashScreen";
+import ParcSelector from "./components/ParcSelector";
 import {
   Map,
   Trophy,
@@ -58,6 +59,9 @@ const App: React.FC = () => {
   const [countdown, setCountdown] = useState(10);
   const [isDataReady, setIsDataReady] = useState(false);
   const [adminAccessDenied, setAdminAccessDenied] = useState(false);
+  const [selectedParcId, setSelectedParcId] = useState<number | null>(
+    Number(localStorage.getItem("selected_parc_id")) || null,
+  );
 
   // ---------------------------------------------------------
   // 🔥 Décompte automatique
@@ -222,7 +226,7 @@ const App: React.FC = () => {
       const loadData = async () => {
         try {
           const [locs, col] = await Promise.all([
-            locationService.getAll(),
+            locationService.getAll(selectedParcId ?? undefined),
             collectionService.getUserCollection(user.id),
           ]);
           setLocations(locs);
@@ -233,7 +237,14 @@ const App: React.FC = () => {
       };
       loadData();
     }
-  }, [appState]); // ❗ user retiré
+  }, [appState]);
+
+  // ---------------------------------------------------------
+  // Filtrage des locations selon le parc choisi
+  // ---------------------------------------------------------
+  const filteredLocations = locations.filter(
+    (loc) => loc.parc_id === selectedParcId,
+  );
 
   // ---------------------------------------------------------
   // GPS (corrigé pour éviter les micro-rerenders inutiles)
@@ -674,6 +685,17 @@ const App: React.FC = () => {
     );
   }
 
+  if (!selectedParcId) {
+    return (
+      <ParcSelector
+        onSelectParc={(id: number) => {
+          localStorage.setItem("selected_parc_id", id.toString());
+          setSelectedParcId(id);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0518] text-white overflow-x-hidden font-nunito">
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -814,7 +836,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {locations.map((loc) => (
+              {filteredLocations.map((loc) => (
                 <LocationCard
                   key={loc.id}
                   location={loc}
@@ -856,7 +878,7 @@ const App: React.FC = () => {
               Trophées
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {locations.map((loc) => {
+              {filteredLocations.map((loc) => {
                 const item = collection[loc.id];
                 const isFound = !!item;
                 const rarityColor =

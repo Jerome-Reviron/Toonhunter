@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { LocationTarget, Coordinates } from "../types";
+import { LocationTarget, Coordinates, Parc } from "../types";
+import { parcService } from "../services/parcService";
 import {
   MapPin,
   Save,
@@ -51,6 +52,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [radius, setRadius] = useState<number>(50);
   const [promptContext, setPromptContext] = useState("");
   const [free, setFree] = useState<boolean>(false);
+  const [parcs, setParcs] = useState<Parc[]>([]);
+  const [parcId, setParcId] = useState<number | null>(null);
+  const [editingParcId, setEditingParcId] = useState<number | null>(null);
+  const [parcName, setParcName] = useState("");
+  const [parcLogo, setParcLogo] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -59,6 +65,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         "A friendly 3D CGI LION with a golden mane. He is standing BEHIND the human subject, peeking over their shoulder. The person blocks part of the lion's body. Realistic fur, bright eyes, Pixar style. NOT a monster, but a Lion.",
       );
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchParcs = async () => {
+      try {
+        const data = await parcService.getAll();
+        setParcs(data);
+      } catch (err) {
+        console.error("Erreur chargement parcs", err);
+      }
+    };
+    fetchParcs();
   }, []);
 
   useEffect(() => {
@@ -141,6 +159,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setRarity(loc.rarity);
     setRadius(loc.radiusMeters || 50);
     setFree(Boolean(loc.free));
+    setParcId(loc.parc_id ?? null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -154,6 +173,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setRarity("Commune");
     setRadius(50);
     setFree(false);
+    setParcId(null);
     generateSmartPrompt("CHARACTER");
     if (userLocation) {
       setLat(userLocation.latitude.toFixed(7));
@@ -184,6 +204,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
       rarity,
       free,
+      parc_id: parcId,
     };
 
     try {
@@ -256,6 +277,152 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </button>
         </div>
 
+        {/* --------------------------------------------------------- */}
+        {/* SECTION : Gestion des Parcs */}
+        {/* --------------------------------------------------------- */}
+        <div className="space-y-4 p-5 bg-white/5 rounded-2xl border border-white/10">
+          <h3 className="font-bold text-blue-400 uppercase text-xs tracking-wider flex items-center gap-2">
+            <Star className="w-4 h-4" /> Gestion des parcs
+          </h3>
+
+          {/* Formulaire ajout / édition */}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+
+              if (!parcName) {
+                alert("Nom du parc obligatoire");
+                return;
+              }
+
+              if (editingParcId) {
+                await parcService.update({
+                  id: editingParcId,
+                  name: parcName,
+                  logo: parcLogo,
+                  userId: Number(userId),
+                });
+
+                setParcs(
+                  parcs.map((p) =>
+                    p.id === editingParcId
+                      ? { ...p, name: parcName, logo: parcLogo }
+                      : p,
+                  ),
+                );
+              } else {
+                const newId = await parcService.create({
+                  name: parcName,
+                  logo: parcLogo,
+                  userId: Number(userId),
+                });
+
+                setParcs([
+                  ...parcs,
+                  { id: newId, name: parcName, logo: parcLogo },
+                ]);
+              }
+
+              setEditingParcId(null);
+              setParcName("");
+              setParcLogo("");
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Nom du parc
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Parc des Étoiles"
+                value={parcName}
+                onChange={(e) => setParcName(e.target.value)}
+                className="w-full bg-black/40 border border-white/20 rounded-lg p-3 focus:border-pink-500 focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                URL du logo
+              </label>
+              <input
+                type="text"
+                placeholder="https://..."
+                value={parcLogo}
+                onChange={(e) => setParcLogo(e.target.value)}
+                className="w-full bg-black/40 border border-white/20 rounded-lg p-3 focus:border-pink-500 focus:outline-none transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2 flex items-center justify-center gap-2 rounded-xl font-black text-white bg-gradient-to-r from-pink-500 to-orange-500 hover:opacity-90 transition"
+            >
+              <Save className="w-4 h-4" />
+              {editingParcId ? "Modifier le parc" : "Créer le parc"}
+            </button>
+          </form>
+
+          {/* --------------------------------------------------------- */}
+          {/* SECTION : Parcs existants */}
+          {/* --------------------------------------------------------- */}
+          <div className="mt-10 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                Parcs existants
+              </h3>
+              <span className="text-xs font-normal text-gray-500 bg-black/30 px-2 py-1 rounded-full">
+                {parcs.length}
+              </span>
+            </div>
+
+            <div className="border-t border-white/10 pt-4 space-y-3">
+              {parcs.map((p) => (
+                <div
+                  key={p.id}
+                  className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:border-purple-500/50 transition-colors"
+                >
+                  <div>
+                    <p className="font-bold text-white">{p.name}</p>
+                    {p.logo && (
+                      <img
+                        src={p.logo}
+                        alt=""
+                        className="h-8 mt-1 rounded-md"
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingParcId(p.id);
+                        setParcName(p.name);
+                        setParcLogo(p.logo || "");
+                      }}
+                      className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        if (!confirm("Supprimer ce parc ?")) return;
+                        await parcService.delete(p.id, Number(userId));
+                        setParcs(parcs.filter((x) => x.id !== p.id));
+                      }}
+                      className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4 p-5 bg-white/5 rounded-2xl border border-white/10">
             <h3 className="font-bold text-pink-400 uppercase text-xs tracking-wider flex items-center gap-2">
@@ -284,6 +451,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 rows={3}
                 className="w-full bg-black/40 border border-white/20 rounded-lg p-3 text-sm"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Parc associé
+              </label>
+
+              <select
+                value={parcId ?? ""}
+                onChange={(e) =>
+                  setParcId(
+                    e.target.value === "" ? null : Number(e.target.value),
+                  )
+                }
+                className="w-full bg-black/40 border border-white/20 rounded-lg p-3 text-sm"
+              >
+                <option value="">Aucun parc</option>
+                {parcs.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -380,6 +569,60 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 className="w-full bg-black/40 border border-white/20 rounded-lg p-3 text-sm"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Accès au point
+              </label>
+
+              <div className="flex items-center gap-4 bg-black/40 border border-white/20 rounded-lg p-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="free"
+                    checked={free === true}
+                    onChange={() => setFree(true)}
+                    className="accent-pink-500"
+                  />
+                  <span className="text-sm">Gratuit</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="free"
+                    checked={free === false}
+                    onChange={() => setFree(false)}
+                    className="accent-pink-500"
+                  />
+                  <span className="text-sm">Payant</span>
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-6 py-4 bg-gray-700 rounded-xl font-bold text-gray-300 hover:bg-gray-600 transition"
+                >
+                  Annuler
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full py-2 flex items-center justify-center gap-2 rounded-xl font-black text-white bg-gradient-to-r from-pink-500 to-orange-500 hover:opacity-90 transition"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />{" "}
+                    {editingId ? "Modifier le point" : "Créer le point"}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4 p-5 bg-white/5 rounded-2xl border border-white/10">
@@ -398,13 +641,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   placeholder="Ex: Mickey..."
                   className="flex-1 bg-black/40 border border-white/20 rounded-lg p-3 focus:border-purple-500 focus:outline-none transition-colors"
                 />
-                <button
-                  type="button"
-                  onClick={() => generateSmartPrompt(characterName)}
-                  className="p-3 bg-purple-500/20 text-purple-400 rounded-lg border border-purple-500/30 hover:bg-purple-500/30 transition"
-                >
-                  <Wand2 className="w-5 h-5" />
-                </button>
               </div>
             </div>
             <div>
@@ -443,60 +679,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 Généré automatiquement, mais modifiable.
               </p>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Accès au point
-            </label>
-
-            <div className="flex items-center gap-4 bg-black/40 border border-white/20 rounded-lg p-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="free"
-                  checked={free === true}
-                  onChange={() => setFree(true)}
-                  className="accent-pink-500"
-                />
-                <span className="text-sm">Gratuit</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="free"
-                  checked={free === false}
-                  onChange={() => setFree(false)}
-                  className="accent-pink-500"
-                />
-                <span className="text-sm">Payant</span>
-              </label>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            {editingId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-6 py-4 bg-gray-700 rounded-xl font-bold text-gray-300 hover:bg-gray-600 transition"
-              >
-                Annuler
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 py-4 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-400 hover:to-orange-500 text-white font-black uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20 transform transition active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {saving ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />{" "}
-                  {editingId ? "Mettre à jour" : "Créer"}
-                </>
-              )}
-            </button>
           </div>
         </form>
 

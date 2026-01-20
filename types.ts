@@ -33,6 +33,12 @@ export interface LocationTarget {
   imageUrl: string;
   rarity: "Commune" | "Rare" | "Légendaire";
   free: boolean;
+  parc_id?: number | null;
+}
+export interface Parc {
+  id: number;
+  name: string;
+  logo: string; // base64
 }
 
 export enum AppState {
