@@ -12,7 +12,7 @@ import {
   X,
   Star,
   Ruler,
-  RefreshCw,
+  ImageIcon,
   Loader2,
 } from "lucide-react";
 
@@ -57,6 +57,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [editingParcId, setEditingParcId] = useState<number | null>(null);
   const [parcName, setParcName] = useState("");
   const [parcLogo, setParcLogo] = useState("");
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoBase64, setLogoBase64] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -112,6 +114,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_SIZE = 300;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = Math.round((height * MAX_SIZE) / width);
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = Math.round((width * MAX_SIZE) / height);
+              height = MAX_SIZE;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          setLogoBase64(canvas.toDataURL("image/jpeg", 0.7));
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -161,6 +197,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setFree(Boolean(loc.free));
     setParcId(loc.parc_id ?? null);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const resetParcForm = () => {
+    setEditingParcId(null);
+    setParcName("");
+    setLogoBase64("");
   };
 
   const resetForm = () => {
@@ -280,7 +322,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* --------------------------------------------------------- */}
         {/* SECTION : Gestion des Parcs */}
         {/* --------------------------------------------------------- */}
-        <div className="space-y-4 p-5 bg-white/5 rounded-2xl border border-white/10">
+        <div className="space-y-4 p-5 bg-white/5 rounded-2xl border border-white/10 mb-6">
           <h3 className="font-bold text-blue-400 uppercase text-xs tracking-wider flex items-center gap-2">
             <Star className="w-4 h-4" /> Gestion des parcs
           </h3>
@@ -299,33 +341,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 await parcService.update({
                   id: editingParcId,
                   name: parcName,
-                  logo: parcLogo,
+                  logo: logoBase64,
                   userId: Number(userId),
                 });
 
                 setParcs(
                   parcs.map((p) =>
                     p.id === editingParcId
-                      ? { ...p, name: parcName, logo: parcLogo }
+                      ? { ...p, name: parcName, logo: logoBase64 }
                       : p,
                   ),
                 );
               } else {
                 const newId = await parcService.create({
                   name: parcName,
-                  logo: parcLogo,
+                  logo: logoBase64,
                   userId: Number(userId),
                 });
 
                 setParcs([
                   ...parcs,
-                  { id: newId, name: parcName, logo: parcLogo },
+                  { id: newId, name: parcName, logo: logoBase64 },
                 ]);
               }
 
               setEditingParcId(null);
               setParcName("");
-              setParcLogo("");
+              setLogoBase64("");
             }}
             className="space-y-4"
           >
@@ -344,24 +386,64 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                URL du logo
+                Logo du parc
               </label>
+
               <input
-                type="text"
-                placeholder="https://..."
-                value={parcLogo}
-                onChange={(e) => setParcLogo(e.target.value)}
-                className="w-full bg-black/40 border border-white/20 rounded-lg p-3 focus:border-pink-500 focus:outline-none transition-colors"
+                type="file"
+                accept="image/*"
+                ref={logoInputRef}
+                onChange={handleLogoUpload}
+                className="hidden"
               />
+
+              <div
+                onClick={() => logoInputRef.current?.click()}
+                className="w-full h-32 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 hover:border-pink-500/50 transition-colors overflow-hidden relative"
+              >
+                {logoBase64 ? (
+                  <img
+                    src={logoBase64}
+                    alt="Logo"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-gray-500 mb-2" />
+                    <span className="text-xs text-gray-400">
+                      Cliquez pour uploader
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-2 flex items-center justify-center gap-2 rounded-xl font-black text-white bg-gradient-to-r from-pink-500 to-orange-500 hover:opacity-90 transition"
-            >
-              <Save className="w-4 h-4" />
-              {editingParcId ? "Modifier le parc" : "Créer le parc"}
-            </button>
+            <div className="flex gap-4">
+              {editingParcId && (
+                <button
+                  type="button"
+                  onClick={resetParcForm}
+                  className="px-6 py-4 bg-gray-700 rounded-xl font-bold text-gray-300 hover:bg-gray-600 transition"
+                >
+                  Annuler
+                </button>
+              )}
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full py-2 flex items-center justify-center gap-2 rounded-xl font-black text-white bg-gradient-to-r from-pink-500 to-orange-500 hover:opacity-90 transition"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {editingParcId ? "Modifier le parc" : "Créer le parc"}
+                  </>
+                )}
+              </button>
+            </div>
           </form>
 
           {/* --------------------------------------------------------- */}
@@ -383,15 +465,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   key={p.id}
                   className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:border-purple-500/50 transition-colors"
                 >
-                  <div>
-                    <p className="font-bold text-white">{p.name}</p>
-                    {p.logo && (
-                      <img
-                        src={p.logo}
-                        alt=""
-                        className="h-8 mt-1 rounded-md"
-                      />
-                    )}
+                  <div className="flex items-center gap-4 overflow-hidden">
+                    <div className="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+                      {p.logo ? (
+                        <img
+                          src={p.logo}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-white/30 mx-auto my-auto" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-white truncate">
+                        {p.name}
+                      </h4>
+                      {/* Tu peux ajouter une description ou un badge ici si tu veux */}
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
@@ -399,13 +491,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       onClick={() => {
                         setEditingParcId(p.id);
                         setParcName(p.name);
-                        setParcLogo(p.logo || "");
+                        setLogoBase64(p.logo || "");
                       }}
                       className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-
                     <button
                       onClick={async () => {
                         if (!confirm("Supprimer ce parc ?")) return;

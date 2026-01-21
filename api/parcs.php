@@ -72,31 +72,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
 
+    // Vérification des champs obligatoires
     if (!$data || !isset($data->name) || !isset($data->logo)) {
         http_response_code(400);
-        echo json_encode(["success" => false, "message" => "Champs manquants."]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Champs manquants."
+        ]);
         return;
     }
 
+    // Vérification admin
     $userId = intval($data->userId ?? 0);
     requireAdmin($pdo, $userId);
 
+    // Lecture des champs
     $name = trim($data->name);
-    $logo = trim($data->logo);
+    $logo = trim($data->logo); // base64 envoyé par React
+
+    // Validation simple
+    if ($name === '' || $logo === '') {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Nom ou logo invalide."
+        ]);
+        return;
+    }
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO parcs (name, logo) VALUES (:name, :logo)");
+        $stmt = $pdo->prepare("
+            INSERT INTO parcs (name, logo)
+            VALUES (:name, :logo)
+        ");
+
         $stmt->execute([
             ':name' => $name,
             ':logo' => $logo
         ]);
 
-        echo json_encode(["success" => true, "id" => (int)$pdo->lastInsertId()]);
+        echo json_encode([
+            "success" => true,
+            "id" => (int)$pdo->lastInsertId()
+        ]);
         return;
 
     } catch (PDOException $e) {
+        error_log("Erreur SQL POST parcs: " . $e->getMessage());
         http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Erreur interne."]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Erreur interne."
+        ]);
         return;
     }
 }
@@ -109,22 +136,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
 
+    // Vérification ID obligatoire
     if (!$data || !isset($data->id)) {
         http_response_code(400);
-        echo json_encode(["success" => false, "message" => "ID manquant."]);
+        echo json_encode([
+            "success" => false,
+            "message" => "ID manquant."
+        ]);
         return;
     }
 
+    // Vérification admin
     $userId = intval($data->userId ?? 0);
     requireAdmin($pdo, $userId);
 
+    // Lecture des champs
     $id   = intval($data->id);
     $name = trim($data->name ?? '');
-    $logo = trim($data->logo ?? '');
+    $logo = trim($data->logo ?? ''); // base64 envoyé par React
 
+    // Validation
     if ($name === '' || $logo === '') {
         http_response_code(400);
-        echo json_encode(["success" => false, "message" => "Champs obligatoires manquants."]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Champs obligatoires manquants."
+        ]);
         return;
     }
 
@@ -146,8 +183,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         return;
 
     } catch (PDOException $e) {
+        error_log("Erreur SQL PUT parcs: " . $e->getMessage());
         http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Erreur interne."]);
+        echo json_encode([
+            "success" => false,
+            "message" => "Erreur interne."
+        ]);
         return;
     }
 }
