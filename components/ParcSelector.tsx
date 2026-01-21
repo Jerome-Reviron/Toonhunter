@@ -52,7 +52,7 @@ const ParcSelector: React.FC<ParcSelectorProps> = ({ onSelectParc }) => {
               onClick={() => handleSelect(parc.id)}
               className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col items-center gap-4 hover:bg-white/10 hover:border-pink-500/40 transition-all shadow-lg"
             >
-              <div className="w-28 h-28 rounded-xl overflow-hidden bg-black/40 border border-white/10">
+              <div className="w-28 h-28 rounded-xl overflow-hidden">
                 <img
                   src={parc.logo}
                   alt={parc.name}

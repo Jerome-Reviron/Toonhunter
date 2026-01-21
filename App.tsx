@@ -31,6 +31,7 @@ import {
   CircleHelp,
   Loader2,
   Send,
+  RefreshCcw,
 } from "lucide-react";
 
 const App: React.FC = () => {
@@ -788,9 +789,19 @@ const App: React.FC = () => {
                 Exploration
               </h2>
               <p className="text-gray-400 text-sm">
-                Découvrez les Toons cachés autour de vous.
+                Découvrez les Toons cachés autour de vous...
               </p>
             </div>
+
+            <button
+              onClick={() => {
+                localStorage.removeItem("selected_parc_id");
+                window.location.reload();
+              }}
+              className="w-full py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <RefreshCcw className="w-4 h-4" /> Où changer de parc.
+            </button>
 
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5 flex flex-wrap gap-4 items-center justify-between backdrop-blur-md shadow-xl">
               <div className="flex items-center gap-3">
