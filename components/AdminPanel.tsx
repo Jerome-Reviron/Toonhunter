@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { LocationTarget, Coordinates, Parc } from "../types";
 import { parcService } from "../services/parcService";
+import { locationService } from "../services/locationService";
 import {
   MapPin,
   Save,
@@ -19,6 +20,7 @@ import {
 interface AdminPanelProps {
   userLocation: Coordinates | null;
   locations: LocationTarget[];
+  selectedParcId: number | null;
   onAddLocation: (location: LocationTarget) => Promise<void>;
   onUpdateLocation: (location: LocationTarget) => Promise<void>;
   onDeleteLocation: (id: string | number) => Promise<void>;
@@ -29,6 +31,7 @@ interface AdminPanelProps {
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   userLocation,
   locations,
+  selectedParcId,
   onAddLocation,
   onUpdateLocation,
   onDeleteLocation,
@@ -56,7 +59,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [parcId, setParcId] = useState<number | null>(null);
   const [editingParcId, setEditingParcId] = useState<number | null>(null);
   const [parcName, setParcName] = useState("");
-  const [parcLogo, setParcLogo] = useState("");
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoBase64, setLogoBase64] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -307,7 +309,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div>
               <h2 className="text-2xl font-display font-black">Admin Panel</h2>
               <p className="text-gray-400 text-sm">
-                {editingId ? "Modifier le point" : "Nouveau point de capture"}
+                {editingId ? "Modifier" : "Nouveau point de capture"}
               </p>
             </div>
           </div>
@@ -439,7 +441,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    {editingParcId ? "Modifier le parc" : "Créer le parc"}
+                    {editingParcId ? "Modifier" : "Créer le parc"}
                   </>
                 )}
               </button>

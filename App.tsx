@@ -60,9 +60,10 @@ const App: React.FC = () => {
   const [countdown, setCountdown] = useState(10);
   const [isDataReady, setIsDataReady] = useState(false);
   const [adminAccessDenied, setAdminAccessDenied] = useState(false);
-  const [selectedParcId, setSelectedParcId] = useState<number | null>(
-    Number(localStorage.getItem("selected_parc_id")) || null,
-  );
+  const [selectedParcId, setSelectedParcId] = useState<number | null>(() => {
+    const stored = localStorage.getItem("selected_parc_id");
+    return stored ? parseInt(stored) : null;
+  });
 
   // ---------------------------------------------------------
   // 🔥 Décompte automatique
@@ -246,6 +247,14 @@ const App: React.FC = () => {
   const filteredLocations = locations.filter(
     (loc) => loc.parc_id === selectedParcId,
   );
+
+  useEffect(() => {
+    if (!selectedParcId) return;
+
+    locationService.getAll(selectedParcId).then((data) => {
+      setLocations(data);
+    });
+  }, [selectedParcId]);
 
   // ---------------------------------------------------------
   // GPS (corrigé pour éviter les micro-rerenders inutiles)
@@ -982,6 +991,7 @@ const App: React.FC = () => {
 
         {currentTab === "admin" && user?.role === "admin" && (
           <AdminPanel
+            selectedParcId={selectedParcId}
             userLocation={userLocation}
             locations={locations}
             onAddLocation={async (l) => {
@@ -990,8 +1000,6 @@ const App: React.FC = () => {
             }}
             onUpdateLocation={async (l) => {
               await locationService.update(l);
-
-              // 👉 Mise à jour du state React
               setLocations((prev) =>
                 prev.map((loc) => (loc.id === l.id ? { ...loc, ...l } : loc)),
               );
