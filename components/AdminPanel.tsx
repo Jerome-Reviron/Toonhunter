@@ -142,7 +142,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           canvas.height = height;
           const ctx = canvas.getContext("2d");
           ctx?.drawImage(img, 0, 0, width, height);
-          setLogoBase64(canvas.toDataURL("image/jpeg", 0.7));
+          setLogoBase64(canvas.toDataURL("image/png"));
         };
         img.src = event.target?.result as string;
       };

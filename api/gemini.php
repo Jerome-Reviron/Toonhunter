@@ -227,30 +227,148 @@ error_log(">>> [Gemini] Compressed image size = " . strlen($compressedImage));
 $finalImage = $compressedImage;
 
 // ---------------------------------------------------------
-// 8) Insertion en base
+// 8) Insertion en base (préparation)
 // ---------------------------------------------------------
 require_once __DIR__ . "/db.php";
 
 $userId = $data["userId"];
 $locationId = $target["id"];
 
-$stmt = $pdo->prepare("
-    INSERT INTO collection (userId, locationId, photoUrl, quote)
-    VALUES (:userId, :locationId, :photoUrl, :quote)
-");
 
-$stmt->execute([
-    ":userId" => $userId,
-    ":locationId" => $locationId,
-    ":photoUrl" => $finalImage,
-    ":quote" => $quote
-]);
+// ---------------------------------------------------------
+// 8.5) Watermark : ajout du logo du parc en bas à droite (safe)
+// ---------------------------------------------------------
 
-error_log(">>> [Gemini] Image insérée en base pour user=$userId loc=$locationId");
+// Si GD n'est pas dispo, on ne tente rien
+if (function_exists('imagecreatefromstring')) {
+    try {
+        // 1) Récupérer le parc associé à la location
+        $stmt = $pdo->prepare("SELECT parc_id FROM locations WHERE id = ?");
+        $stmt->execute([$locationId]);
+        $parcId = $stmt->fetchColumn();
+
+        if ($parcId) {
+            // 2) Récupérer le logo du parc
+            $stmt = $pdo->prepare("SELECT logo FROM parcs WHERE id = ?");
+            $stmt->execute([$parcId]);
+            $logoData = $stmt->fetchColumn();
+
+            if ($logoData && $finalImage) {
+                // 3) Extraire la partie base64 (enlever le prefix data:...;base64,)
+                if (strpos($logoData, 'base64,') !== false) {
+                    $logoData = explode('base64,', $logoData)[1];
+                }
+
+                $logoBinary = base64_decode($logoData);
+                $finalBinary = base64_decode($finalImage);
+
+                if ($logoBinary && $finalBinary) {
+                    $logoImg = @imagecreatefromstring($logoBinary);
+                    $generatedImg = @imagecreatefromstring($finalBinary);
+
+                    if ($logoImg && $generatedImg) {
+                        $genW = imagesx($generatedImg);
+                        $genH = imagesy($generatedImg);
+                        $logoW = imagesx($logoImg);
+                        $logoH = imagesy($logoImg);
+
+                        // 6) Redimensionner le logo (max 15% de la largeur)
+                        $maxLogoWidth = intval($genW * 0.25);
+                        if ($logoW > $maxLogoWidth) {
+                            $ratio = $maxLogoWidth / $logoW;
+                            $newLogoW = $maxLogoWidth;
+                            $newLogoH = intval($logoH * $ratio);
+
+                            // ✅ Création d’un canvas transparent
+                            $resizedLogo = imagecreatetruecolor($newLogoW, $newLogoH);
+                            imagesavealpha($resizedLogo, true);
+                            $transparent = imagecolorallocatealpha($resizedLogo, 0, 0, 0, 127);
+                            imagefill($resizedLogo, 0, 0, $transparent);
+
+                            // ✅ Copie du logo avec alpha
+                            imagecopyresampled(
+                                $resizedLogo,
+                                $logoImg,
+                                0, 0, 0, 0,
+                                $newLogoW, $newLogoH,
+                                $logoW, $logoH
+                            );
+
+                            $logoImg = $resizedLogo;
+                            $logoW = $newLogoW;
+                            $logoH = $newLogoH;
+                        }
+
+
+                        // 7) Position bas droite avec marge
+                        $margin = 20;
+                        $dstX = $genW - $logoW - $margin;
+                        $dstY = $genH - $logoH - $margin;
+
+                        // 8) Fusion du logo sur l'image générée
+                        imagesavealpha($generatedImg, true);
+                        imagecopy($generatedImg, $logoImg, $dstX, $dstY, 0, 0, $logoW, $logoH);
+
+                        // 9) Ré-encodage final en base64
+                        ob_start();
+                        imagejpeg($generatedImg, null, 90);
+                        $finalImage = base64_encode(ob_get_clean());
+                    } else {
+                        error_log(">>> [Gemini] Watermark : échec imagecreatefromstring");
+                    }
+                } else {
+                    error_log(">>> [Gemini] Watermark : base64 decode vide");
+                }
+            } else {
+                error_log(">>> [Gemini] Watermark : pas de logo ou pas d'image finale");
+            }
+        } else {
+            error_log(">>> [Gemini] Watermark : aucun parc_id pour locationId=$locationId");
+        }
+    } catch (Throwable $e) {
+        error_log(">>> [Gemini] Watermark ERROR : " . $e->getMessage());
+        // on ne jette pas d'erreur vers le frontend, on continue sans watermark
+    }
+} else {
+    error_log(">>> [Gemini] Watermark : GD non disponible (imagecreatefromstring absent)");
+}
+
+// ---------------------------------------------------------
+// 8.6) Insertion en base (capture dans la collection)
+// ---------------------------------------------------------
+try {
+    $stmt = $pdo->prepare("
+        INSERT INTO collection (userId, locationId, photoUrl, quote)
+        VALUES (:userId, :locationId, :photoUrl, :quote)
+    ");
+
+    $stmt->execute([
+        ":userId" => $userId,
+        ":locationId" => $locationId,
+        ":photoUrl" => $finalImage,
+        ":quote" => $quote
+    ]);
+
+    error_log(">>> [Gemini] Capture insérée en base pour user=$userId, location=$locationId");
+} catch (Throwable $e) {
+    error_log(">>> [Gemini] ERREUR INSERT COLLECTION : " . $e->getMessage());
+}
 
 // ---------------------------------------------------------
 // 9) Réponse frontend
 // ---------------------------------------------------------
+
+// 🔥 LOG FINAL POUR DEBUG
+error_log(">>> [Gemini] JSON FINAL : " . json_encode([
+    "success" => true,
+    "item" => [
+        "locationId" => $locationId,
+        "photoUrl"   => $finalImage,
+        "quote"      => $quote,
+        "capturedAt" => date("Y-m-d H:i:s")
+    ]
+]));
+
 echo json_encode([
     "success" => true,
     "item" => [
@@ -261,4 +379,4 @@ echo json_encode([
     ]
 ]);
 
-error_log(">>> [Gemini] Réponse envoyée au frontend");
+error_log(">>> [Gemini] FIN DU SCRIPT");

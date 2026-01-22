@@ -7,7 +7,7 @@ import { authService } from "./authService";
  */
 export const generateCharacterPhoto = async (
   base64Image: string,
-  target: LocationTarget
+  target: LocationTarget,
 ): Promise<{ image: string; quote: string }> => {
   console.log("📸 [Gemini] generateCharacterPhoto() appelé");
   console.log("📤 [Gemini] Taille image base64 envoyée :", base64Image.length);
@@ -55,10 +55,7 @@ export const generateCharacterPhoto = async (
 
     console.log("🎉 [Gemini] Success → image + quote renvoyées");
 
-    return {
-      image: photoUrl,
-      quote: quote,
-    };
+    return { image: data.item.photoUrl, quote: data.item.quote };
   } catch (error: any) {
     console.error("🔥 [Gemini] ERREUR CAPTURE :", error);
     throw new Error("Erreur IA : " + error.message);
