@@ -298,6 +298,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     </button>
   );
 
+  const countForSelectedParc = locations.filter(
+    (loc) => selectedParcId !== null && loc.parc_id === selectedParcId,
+  ).length;
+
   return (
     <div className="min-h-screen bg-[#0f0518] p-6 pb-24 text-white">
       <div className="max-w-md mx-auto">
@@ -711,7 +715,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 ) : (
                   <>
                     <Save className="w-4 h-4" />{" "}
-                    {editingId ? "Modifier le point" : "Créer le point"}
+                    {editingId ? "Modifier" : "Créer le point"}
                   </>
                 )}
               </button>
@@ -779,72 +783,88 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <h3 className="text-xl font-display font-bold mb-6 flex items-center gap-2">
             Points de capture existants{" "}
             <span className="text-xs font-normal text-gray-500 bg-black/30 px-2 py-1 rounded-full">
-              {locations.length}
+              {countForSelectedParc}
             </span>
           </h3>
           <div className="space-y-4">
-            {locations.map((loc) => {
-              const badgeColor =
-                loc.rarity === "Légendaire"
-                  ? "text-amber-400"
-                  : loc.rarity === "Rare"
-                    ? "text-purple-400"
-                    : "text-blue-400";
-              return (
-                <div
-                  key={loc.id}
-                  className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:border-purple-500/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4 overflow-hidden">
-                    <div className="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
-                      <img
-                        src={loc.imageUrl}
-                        alt={loc.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-white truncate">
-                          {loc.characterName}
-                        </h4>
-                        <Star
-                          className={`w-3 h-3 ${badgeColor} fill-current`}
+            {[...locations]
+              .sort((a, b) => {
+                const aIsOther =
+                  selectedParcId !== null && a.parc_id !== selectedParcId;
+                const bIsOther =
+                  selectedParcId !== null && b.parc_id !== selectedParcId;
+                return Number(aIsOther) - Number(bIsOther);
+              })
+              .map((loc) => {
+                const badgeColor =
+                  loc.rarity === "Légendaire"
+                    ? "text-amber-400"
+                    : loc.rarity === "Rare"
+                      ? "text-purple-400"
+                      : "text-blue-400";
+
+                // 🔥 Détection : ce point n'appartient PAS au parc sélectionné
+                const isOtherParc =
+                  selectedParcId !== null && loc.parc_id !== selectedParcId;
+
+                return (
+                  <div
+                    key={loc.id}
+                    className={`bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:border-purple-500/50 transition-colors ${
+                      isOtherParc ? "grayscale opacity-50 hover:opacity-80" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-4 overflow-hidden">
+                      <div className="w-12 h-12 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+                        <img
+                          src={loc.imageUrl}
+                          alt={loc.name}
+                          className="w-full h-full object-cover"
                         />
                       </div>
-                      <p className="text-xs text-white/80 mb-1 truncate">
-                        {loc.name}
-                      </p>
-                      <p className="text-xs text-gray-400 mb-1 truncate">
-                        {loc.description}
-                      </p>
-                      <p
-                        className={`text-xs font-bold ${
-                          loc.free ? "text-green-400" : "text-red-400"
-                        }`}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-white truncate">
+                            {loc.characterName}
+                          </h4>
+                          <Star
+                            className={`w-3 h-3 ${badgeColor} fill-current`}
+                          />
+                        </div>
+                        <p className="text-xs text-white/80 mb-1 truncate">
+                          {loc.name}
+                        </p>
+                        <p className="text-xs text-gray-400 mb-1 truncate">
+                          {loc.description}
+                        </p>
+                        <p
+                          className={`text-xs font-bold ${
+                            loc.free ? "text-green-400" : "text-red-400"
+                          }`}
+                        >
+                          {loc.free ? "Gratuit" : "Payant"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditClick(loc)}
+                        className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors"
                       >
-                        {loc.free ? "Gratuit" : "Payant"}
-                      </p>
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(loc.id)}
+                        disabled={saving}
+                        className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditClick(loc)}
-                      className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(loc.id)}
-                      disabled={saving}
-                      className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       </div>

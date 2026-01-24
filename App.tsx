@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [locations, setLocations] = useState<LocationTarget[]>([]);
+  const [allLocations, setAllLocations] = useState<LocationTarget[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<LocationTarget | null>(
     null,
   );
@@ -196,6 +197,16 @@ const App: React.FC = () => {
       setAppState(AppState.ERROR);
     }
   };
+
+  const fetchAllLocations = async () => {
+    try {
+      const data = await locationService.getAll(); // 🔥 sans parc_id
+      setAllLocations(data);
+    } catch (err) {
+      console.error("Erreur chargement locations globales", err);
+    }
+  };
+
   // ---------------------------------------------------------
   // Empêcher le reload automatique après capture (Android / Chrome bug)
   // ---------------------------------------------------------
@@ -223,23 +234,43 @@ const App: React.FC = () => {
   // ---------------------------------------------------------
   // Chargement des données du parc
   // ---------------------------------------------------------
+  // useEffect(() => {
+  //   if (appState === AppState.LIST && user) {
+  //     const loadData = async () => {
+  //       try {
+  //         const [locs, col] = await Promise.all([
+  //           locationService.getAll(selectedParcId ?? undefined),
+  //           collectionService.getUserCollection(user.id),
+  //         ]);
+  //         setLocations(locs);
+  //         setCollection(col);
+  //       } catch (e) {
+  //         console.error("Load error:", e);
+  //       }
+  //     };
+  //     loadData();
+  //   }
+  // }, [appState]);
   useEffect(() => {
     if (appState === AppState.LIST && user) {
       const loadData = async () => {
         try {
-          const [locs, col] = await Promise.all([
-            locationService.getAll(selectedParcId ?? undefined),
+          const [locs, col, allLocs] = await Promise.all([
+            locationService.getAll(selectedParcId ?? undefined), // filtré parc
             collectionService.getUserCollection(user.id),
+            locationService.getAll(), // 🔥 toutes les locations pour l’admin
           ]);
-          setLocations(locs);
+
+          setLocations(locs); // pour map / collection
           setCollection(col);
+          setAllLocations(allLocs); // pour AdminPanel
         } catch (e) {
           console.error("Load error:", e);
         }
       };
       loadData();
     }
-  }, [appState]);
+  }, [appState, user, selectedParcId]);
 
   // ---------------------------------------------------------
   // Filtrage des locations selon le parc choisi
@@ -989,11 +1020,11 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {currentTab === "admin" && user?.role === "admin" && (
+        {/* {currentTab === "admin" && user?.role === "admin" && (
           <AdminPanel
             selectedParcId={selectedParcId}
             userLocation={userLocation}
-            locations={locations}
+            locations={allLocations}
             onAddLocation={async (l) => {
               const created = await locationService.create(l);
               setLocations([...locations, created]);
@@ -1007,6 +1038,55 @@ const App: React.FC = () => {
             onDeleteLocation={async (id) => {
               await locationService.delete(Number(id), Number(user.id));
               setLocations(locations.filter((x) => x.id !== id));
+            }}
+            onClose={() => setCurrentTab("map")}
+            userId={user.id}
+          />
+        )} */}
+        {currentTab === "admin" && user?.role === "admin" && (
+          <AdminPanel
+            selectedParcId={selectedParcId}
+            userLocation={userLocation}
+            locations={allLocations}
+            onAddLocation={async (l) => {
+              const created = await locationService.create(l);
+
+              // 🔁 maj liste globale admin
+              setAllLocations((prev) => [...prev, created]);
+
+              // 🔁 si le point appartient au parc sélectionné → on l’ajoute aussi à locations (map/collection)
+              if (created.parc_id === selectedParcId) {
+                setLocations((prev) => [...prev, created]);
+              }
+            }}
+            onUpdateLocation={async (l) => {
+              await locationService.update(l);
+
+              // 🔁 maj liste globale admin
+              setAllLocations((prev) =>
+                prev.map((loc) => (loc.id === l.id ? { ...loc, ...l } : loc)),
+              );
+
+              // 🔁 maj liste filtrée (map/collection)
+              setLocations((prev) => {
+                // si la location mise à jour appartient au parc sélectionné
+                if (l.parc_id === selectedParcId) {
+                  return prev.map((loc) =>
+                    loc.id === l.id ? { ...loc, ...l } : loc,
+                  );
+                }
+                // sinon, on la retire de la liste filtrée
+                return prev.filter((loc) => loc.id !== l.id);
+              });
+            }}
+            onDeleteLocation={async (id) => {
+              await locationService.delete(Number(id), Number(user.id));
+
+              // 🔁 maj liste globale admin
+              setAllLocations((prev) => prev.filter((x) => x.id !== id));
+
+              // 🔁 maj liste filtrée (map/collection)
+              setLocations((prev) => prev.filter((x) => x.id !== id));
             }}
             onClose={() => setCurrentTab("map")}
             userId={user.id}

@@ -20,8 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     error_log(">>> [Location] GET reçu");
 
     try {
-        // 🔥 Filtrage par parc si parc_id est présent dans l'URL
-        if (isset($_GET['parc_id'])) {
+        if (isset($_GET['parc_id']) && $_GET['parc_id'] !== "") {
+
             $pid = intval($_GET['parc_id']);
 
             if ($pid <= 0) {
@@ -30,10 +30,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 return;
             }
 
+            // 🔥 Renvoyer uniquement les locations du parc
             $stmt = $pdo->prepare("SELECT * FROM locations WHERE parc_id = :pid");
             $stmt->execute([':pid' => $pid]);
+
         } else {
-            // 🔥 AdminPanel ou fallback → renvoie tout
+            // 🔥 Aucun parc sélectionné → renvoyer TOUTES les locations
             $stmt = $pdo->query("SELECT * FROM locations");
         }
 
@@ -46,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         return;
     }
 
-    // 🔥 Normalisation des champs
+    // Normalisation…
     foreach ($locations as &$loc) {
         $loc['coordinates'] = [
             'latitude'  => isset($loc['latitude'])  ? (float)$loc['latitude']  : null,
@@ -152,8 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
     $free = isset($data->free) ? (int)$data->free : 0;
-    $parcId = isset($data->parc_id) ? intval($data->parc_id) : null;
-
+    $parcId = isset($data->parc_id) && $data->parc_id !== "" ? intval($data->parc_id) : null;
 
     // 🔥 Validation stricte
     if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
@@ -235,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $rarity        = trim($data->rarity ?? '');
     $validationKeywords = trim($data->validationKeywords ?? '');
     $free = isset($data->free) ? (int)$data->free : 0;
-    $parcId = isset($data->parc_id) ? intval($data->parc_id) : null;
+    $parcId = isset($data->parc_id) && $data->parc_id !== "" ? intval($data->parc_id) : null;
 
     // 🔥 Validation stricte
     if ($name === '' || $characterName === '' || $lat === null || $lng === null || $radius === null) {
