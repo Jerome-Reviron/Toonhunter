@@ -1,16 +1,16 @@
 <?php
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type");
+require_once __DIR__ . "/cors.php";
 header("Content-Type: application/json");
+
 
 // ---------------------------------------------------------
 // 0) Lecture du POST (UNE SEULE FOIS)
 // ---------------------------------------------------------
 $raw = file_get_contents("php://input"); 
-error_log(">>> [Gemini] RAW POST : " . $raw); 
+// error_log(">>> [Gemini] RAW POST : " . $raw); 
 
 $data = json_decode($raw, true); 
-error_log(">>> [Gemini] DATA DECODED : " . print_r($data, true)); 
+// error_log(">>> [Gemini] DATA DECODED : " . print_r($data, true)); 
 
 $imageBase64 = $data["image"] ?? null; 
 $target = $data["target"] ?? null; 
@@ -20,7 +20,17 @@ if (!$imageBase64 || !$target) { error_log(">>> [Gemini] ERREUR : image ou targe
     echo json_encode(["error" => "Image ou cible manquante"]); 
 exit; }
 
-error_log(">>> [Gemini] Image reçue (taille base64) : " . strlen($imageBase64));
+// --------------------------------------------------------- 
+// 🔐 Limite de taille image (5 Mo max) 
+// --------------------------------------------------------- 
+if (strlen($imageBase64) > 6 * 1024 * 1024) { // 6 Mo 
+    error_log(">>> [Gemini] ERREUR : image trop volumineuse (" . strlen($imageBase64) . " octets)"); 
+    http_response_code(413); // Payload Too Large 
+    echo json_encode(["error" => "Image trop volumineuse (max 5 Mo)"]); 
+    exit; 
+}
+
+// error_log(">>> [Gemini] Image reçue (taille base64) : " . strlen($imageBase64));
 
 // ---------------------------------------------------------
 // 1) Chargement credentials
@@ -121,7 +131,6 @@ if (!$accessToken) {
     http_response_code(500);
     echo json_encode([
         "error" => "Token OAuth introuvable",
-        "details" => $tokenData
     ]);
     exit;
 }
@@ -172,7 +181,7 @@ $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-error_log(">>> [Gemini] Réponse brute Gemini : " . substr($response, 0, 200));
+// error_log(">>> [Gemini] Réponse brute Gemini : " . substr($response, 0, 200));
 
 // ---------------------------------------------------------
 // 6) Gestion erreurs Gemini
@@ -201,12 +210,12 @@ $quote = "";
 foreach ($parts as $p) {
     if (isset($p["inlineData"]["data"])) {
         $finalImage = $p["inlineData"]["data"];
-        error_log(">>> [Gemini] Image générée trouvée (base64)");
+        // error_log(">>> [Gemini] Image générée trouvée (base64)");
     }
 
     if (isset($p["text"])) {
         $quote = trim($p["text"]);
-        error_log(">>> [Gemini] Texte généré : " . $quote);
+        // error_log(">>> [Gemini] Texte généré : " . $quote);
     }
 }
 
@@ -215,13 +224,13 @@ if (!$quote) {
     error_log(">>> [Gemini] Aucune citation → fallback");
 }
 
-error_log(">>> [Gemini] FINAL IMAGE LENGTH = " . strlen($finalImage));
+// error_log(">>> [Gemini] FINAL IMAGE LENGTH = " . strlen($finalImage));
 
 // ---------------------------------------------------------
 // 7.5) Compression de l'image générée
 // ---------------------------------------------------------
 $compressedImage = compressBase64Image($finalImage, 1024, 75);
-error_log(">>> [Gemini] Compressed image size = " . strlen($compressedImage));
+// error_log(">>> [Gemini] Compressed image size = " . strlen($compressedImage));
 
 // On remplace l'image finale par la version compressée
 $finalImage = $compressedImage;
@@ -359,15 +368,15 @@ try {
 // ---------------------------------------------------------
 
 // 🔥 LOG FINAL POUR DEBUG
-error_log(">>> [Gemini] JSON FINAL : " . json_encode([
-    "success" => true,
-    "item" => [
-        "locationId" => $locationId,
-        "photoUrl"   => $finalImage,
-        "quote"      => $quote,
-        "capturedAt" => date("Y-m-d H:i:s")
-    ]
-]));
+// error_log(">>> [Gemini] JSON FINAL : " . json_encode([
+//     "success" => true,
+//     "item" => [
+//         "locationId" => $locationId,
+//         "photoUrl"   => $finalImage,
+//         "quote"      => $quote,
+//         "capturedAt" => date("Y-m-d H:i:s")
+//     ]
+// ]));
 
 echo json_encode([
     "success" => true,
@@ -379,4 +388,4 @@ echo json_encode([
     ]
 ]);
 
-error_log(">>> [Gemini] FIN DU SCRIPT");
+// error_log(">>> [Gemini] FIN DU SCRIPT");

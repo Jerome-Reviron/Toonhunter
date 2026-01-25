@@ -18,7 +18,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Mode Débogage
-usbStarted.tx
+usbStarted.txt
 
 # API GEMINI
 gen-lang-client-0774329877-3fe700b41a3a.json

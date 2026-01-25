@@ -1,0 +1,81 @@
+# ---------------------------------------------------------
+
+# Sécurité globale du projet (RACINE)
+
+# ---------------------------------------------------------
+
+# Désactiver l’indexation des dossiers
+
+Options -Indexes
+
+# Rediriger les erreurs 404 vers une page sécurisée (API)
+
+ErrorDocument 404 /api/error.php
+
+# ---------------------------------------------------------
+
+# Protection des fichiers sensibles
+
+# ---------------------------------------------------------
+
+# Bloquer l’accès aux fichiers .env
+
+<FilesMatch "^\.env">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# Bloquer les fichiers PEM / KEY (clés privées)
+
+<FilesMatch "\.(pem|key)$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# Bloquer les JSON sensibles (clé Gemini)
+
+<FilesMatch "gen-lang-client-.\*\.json$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# Bloquer tous les .json sauf si explicitement autorisés
+
+<FilesMatch "\.json$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# Bloquer les fichiers de backup / archives
+
+<FilesMatch "\.(bak|old|zip|tar|gz|sql|7z)$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# Bloquer les fichiers de github
+
+<Files ".gitignore">
+Order allow,deny
+Deny from all
+</Files>
+
+# ---------------------------------------------------------
+
+# Protection des fichiers inutiles pour une API privée
+
+# ---------------------------------------------------------
+
+# Bloquer robots.txt
+
+<Files "robots.txt">
+Order allow,deny
+Deny from all
+</Files>
+
+# Bloquer sitemap.xml
+
+<Files "sitemap.xml">
+Order allow,deny
+Deny from all
+</Files>

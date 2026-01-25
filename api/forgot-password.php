@@ -3,11 +3,6 @@
 // forgot-password.php - Version blindée
 // ---------------------------------------------------------
 
-// ⚠️ À désactiver en production
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require_once __DIR__ . "/cors.php";
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/vendor/autoload.php'; // PHPMailer
@@ -57,7 +52,17 @@ if (strlen($email) > 255) {
 // ---------------------------------------------------------
 // 3) Récupération IP et protection anti-abus
 // ---------------------------------------------------------
-$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+function getUserIP() {
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        return trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+    }
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        return $_SERVER['HTTP_CLIENT_IP'];
+    }
+    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+}
+
+$ip = getUserIP();
 
 // Limite 1 : max 5 demandes par heure pour une même IP
 try {
@@ -116,14 +121,14 @@ try {
     $stmt->execute([':email' => $email]);
     $lastRequest = $stmt->fetchColumn();
 
-    // if ($lastRequest && strtotime($lastRequest) > time() - 120) {
-    //     // Même réponse neutre : on ne dit pas si ça a vraiment été envoyé
-    //     echo json_encode([
-    //         "success" => true,
-    //         "message" => "Si un compte existe, un email a été envoyé."
-    //     ]);
-    //     exit;
-    // }
+    if ($lastRequest && strtotime($lastRequest) > time() - 120) {
+        // Même réponse neutre : on ne dit pas si ça a vraiment été envoyé
+        echo json_encode([
+            "success" => true,
+            "message" => "Si un compte existe, un email a été envoyé."
+        ]);
+        exit;
+    }
 } catch (PDOException $e) {
     error_log("Erreur SQL forgot-password (last request): " . $e->getMessage());
     http_response_code(500);
@@ -164,7 +169,7 @@ $expiresAt = date('Y-m-d H:i:s', time() + 900); // 15 minutes
     "); 
     $stmt->execute([ 
         ':email' => $email, 
-        ':token' => $code, 
+        ':token' => password_hash($code, PASSWORD_DEFAULT),
         ':expires' => $expiresAt, 
         ':ip' => $ip 
     ]); 
@@ -192,8 +197,7 @@ if (!$emailExists) {
 if ($_SERVER['SERVER_NAME'] === 'localhost') {
     echo json_encode([
         "success" => true,
-        "message" => "Code généré (mode local).",
-        "debug"   => $code // ⚠️ À retirer en production
+        "message" => "Code généré (mode local)."
     ]);
     exit;
 }
@@ -205,12 +209,14 @@ $mail = new PHPMailer(true);
 
 try {
     $mail->isSMTP();
-    $mail->Host       = 'smtp.hostinger.com';
+    $mail->Host       = $_ENV['SMTP_HOST'];
     $mail->SMTPAuth   = true;
-    $mail->Username   = 'ton-email@tondomaine.com'; // ex: contact@toonhunter.fr
-    $mail->Password   = 'TON_MOT_DE_PASSE_SMTP';
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // SSL
-    $mail->Port       = 465;
+    $mail->Username   = $_ENV['SMTP_USER'];
+    $mail->Password   = $_ENV['SMTP_PASS'];
+    $mail->Port = (int)$_ENV['SMTP_PORT'];
+    $mail->SMTPSecure = $_ENV['SMTP_SECURE'] === 'ssl' 
+        ? PHPMailer::ENCRYPTION_SMTPS 
+        : PHPMailer::ENCRYPTION_STARTTLS;
 
     $mail->setFrom('noreply@tondomaine.com', 'ToonHunter');
     $mail->addAddress($email);
