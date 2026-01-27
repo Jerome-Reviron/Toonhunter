@@ -5,6 +5,8 @@
 
 require_once __DIR__ . "/cors.php";
 require_once __DIR__ . "/db.php";
+// Démarre la session ici (premier fichier de l'app) 
+session_start();
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -214,8 +216,15 @@ if ($roleFromDb === 'admin') {
     $user['role'] = 'user';
 }
 
+// --------------------------------------------------------- 
+// 8) Création de la session utilisateur 
+// --------------------------------------------------------- 
+$_SESSION['user_id'] = $user['id']; 
+$_SESSION['role'] = $user['role']; 
+$_SESSION['isPaid'] = $user['isPaid'];
+
 // ---------------------------------------------------------
-// 8) Réponse finale
+// 9) Réponse finale
 // ---------------------------------------------------------
 echo json_encode([
     "success" => true,

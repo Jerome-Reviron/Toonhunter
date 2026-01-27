@@ -4,6 +4,7 @@ error_log(">>> [Collection] Fichier exécuté : " . __FILE__);
 
 require_once __DIR__ . "/cors.php";
 require_once __DIR__ . "/db.php";
+require_once __DIR__ . "/auth.php"; 
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -14,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     error_log(">>> [Collection] GET reçu");
 
     // Harmonisation : userId (comme dans locations.php)
-    $userId = isset($_GET['userId']) ? (int)$_GET['userId'] : 0;
+    $userId = $_SESSION['user_id'];
 
     if ($userId <= 0) {
         http_response_code(400);

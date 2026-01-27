@@ -1,7 +1,16 @@
 <?php
 require_once __DIR__ . "/cors.php";
+// 🔵 AJOUT : protection session + auth 
+require_once __DIR__ . "/auth.php";
+
 header("Content-Type: application/json");
 
+// 🔵 AJOUT : vérifier que l’utilisateur est connecté 
+if (!isset($_SESSION['user_id'])) { 
+    http_response_code(401); 
+    echo json_encode(["error" => "Non authentifié"]); 
+    exit; 
+}
 
 // ---------------------------------------------------------
 // 0) Lecture du POST (UNE SEULE FOIS)
@@ -240,7 +249,8 @@ $finalImage = $compressedImage;
 // ---------------------------------------------------------
 require_once __DIR__ . "/db.php";
 
-$userId = $data["userId"];
+// 🔵 AJOUT : on utilise la session pour éviter l'usurpation 
+$userId = $_SESSION['user_id'];
 $locationId = $target["id"];
 
 

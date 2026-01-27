@@ -65,6 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // POST : créer un parc (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 🔵 AJOUT : protection session + auth 
+    require_once __DIR__ . "/auth.php";
 
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
@@ -80,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Vérification admin
-    $userId = intval($data->userId ?? 0);
+    $userId = $_SESSION['user_id']; 
     requireAdmin($pdo, $userId);
 
     // Lecture des champs
@@ -129,6 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // PUT : modifier un parc (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    // 🔵 AJOUT : protection session + auth 
+    require_once __DIR__ . "/auth.php";
 
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
@@ -144,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     }
 
     // Vérification admin
-    $userId = intval($data->userId ?? 0);
+    $userId = $_SESSION['user_id'];
     requireAdmin($pdo, $userId);
 
     // Lecture des champs
@@ -194,6 +198,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 // DELETE : supprimer un parc (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    // 🔵 AJOUT : protection session + auth 
+    require_once __DIR__ . "/auth.php";
 
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
@@ -204,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         return;
     }
 
-    $userId = intval($data->userId ?? 0);
+    $userId = $_SESSION['user_id'];    
     requireAdmin($pdo, $userId);
 
     $id = intval($data->id);

@@ -120,6 +120,8 @@ function requireAdmin(PDO $pdo, $userId)
 // POST : ajouter une nouvelle location (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 🔵 AJOUT : protection session + auth 
+    require_once __DIR__ . "/auth.php";
 
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
@@ -131,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // 🔒 Vérification admin
-    $userId = intval($data->userId ?? 0);
+    $userId = $_SESSION['user_id']; 
     requireAdmin($pdo, $userId);
 
     // 🔥 Lecture des champs EXACTEMENT comme ton JSON POST
@@ -204,6 +206,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // PUT : mettre à jour une location existante (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    // 🔵 AJOUT : protection session + auth 
+    require_once __DIR__ . "/auth.php";
 
     $raw = file_get_contents("php://input");
     $data = json_decode($raw);
@@ -215,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     }
 
     // 🔒 Vérification admin
-    $userId = intval($data->userId ?? 0);
+    $userId = $_SESSION['user_id']; 
     requireAdmin($pdo, $userId);
 
     // 🔥 Lecture EXACTE selon ton JSON POST/PUT
@@ -291,6 +295,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 // DELETE : supprimer une location (ADMIN ONLY)
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    // 🔵 AJOUT : protection session + auth 
+    require_once __DIR__ . "/auth.php";
 
     // Lecture du JSON envoyé par le frontend
     $raw = file_get_contents("php://input");
@@ -304,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     }
 
     // 🔒 Vérification admin (même logique que POST et PUT)
-    $userId = intval($data->userId ?? 0);
+    $userId = $_SESSION['user_id']; 
     requireAdmin($pdo, $userId);
 
     $id = intval($data->id);

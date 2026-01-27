@@ -343,7 +343,14 @@ const App: React.FC = () => {
   // ---------------------------------------------------------
   // Déconnexion
   // ---------------------------------------------------------
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // 🔥 Déconnexion côté serveur (destruction session PHP)
+    await fetch("/api/logout.php", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    // 🔥 Déconnexion côté frontend (vider les states)
     authService.logout();
     setUser(null);
     setAppState(AppState.AUTH);

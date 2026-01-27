@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/cors.php";
 require_once __DIR__ . "/db.php";
+require_once __DIR__ . "/auth.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -16,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 // ---------------------------------------------------------
 // 2) Récupération et validation du userId
 // ---------------------------------------------------------
-$userId = isset($_GET['userId']) ? intval($_GET['userId']) : 0;
+$userId = $_SESSION['user_id'];
 
 if ($userId <= 0) {
     http_response_code(400);

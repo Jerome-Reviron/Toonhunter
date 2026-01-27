@@ -53,7 +53,7 @@ Order allow,deny
 Deny from all
 </FilesMatch>
 
-# Bloquer les fichiers de github
+# Bloquer les fichiers Git
 
 <Files ".gitignore">
 Order allow,deny
@@ -79,3 +79,51 @@ Deny from all
 Order allow,deny
 Deny from all
 </Files>
+
+# ---------------------------------------------------------
+
+# Protection des fichiers PHP internes
+
+# ---------------------------------------------------------
+
+# Bloquer les fichiers internes non destinés à être appelés directement
+
+<FilesMatch "^(db|cors|error|config|init)\.php$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# ---------------------------------------------------------
+
+# Protection du dossier vendor
+
+# ---------------------------------------------------------
+
+# Bloquer l'accès complet au dossier vendor
+
+RedirectMatch 404 ^/vendor/.\*$
+
+# ---------------------------------------------------------
+
+# Protection des fichiers Composer
+
+# ---------------------------------------------------------
+
+<FilesMatch "^(composer\.json|composer\.lock)$">
+Order allow,deny
+Deny from all
+</FilesMatch>
+
+# ---------------------------------------------------------
+
+# Protection des dossiers internes (si présents)
+
+# ---------------------------------------------------------
+
+# Bloquer un éventuel dossier private
+
+RedirectMatch 404 ^/private/.\*$
+
+# Bloquer un éventuel dossier src côté backend
+
+RedirectMatch 404 ^/src/.\*$
