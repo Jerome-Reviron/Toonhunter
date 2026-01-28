@@ -1027,29 +1027,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* {currentTab === "admin" && user?.role === "admin" && (
-          <AdminPanel
-            selectedParcId={selectedParcId}
-            userLocation={userLocation}
-            locations={allLocations}
-            onAddLocation={async (l) => {
-              const created = await locationService.create(l);
-              setLocations([...locations, created]);
-            }}
-            onUpdateLocation={async (l) => {
-              await locationService.update(l);
-              setLocations((prev) =>
-                prev.map((loc) => (loc.id === l.id ? { ...loc, ...l } : loc)),
-              );
-            }}
-            onDeleteLocation={async (id) => {
-              await locationService.delete(Number(id), Number(user.id));
-              setLocations(locations.filter((x) => x.id !== id));
-            }}
-            onClose={() => setCurrentTab("map")}
-            userId={user.id}
-          />
-        )} */}
         {currentTab === "admin" && user?.role === "admin" && (
           <AdminPanel
             selectedParcId={selectedParcId}
