@@ -11,18 +11,18 @@ header("Content-Type: application/json; charset=UTF-8");
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     echo json_encode(["success" => false, "message" => "Méthode non autorisée."]);
-    return;
+    exit;
 }
 
 // ---------------------------------------------------------
 // 2) Récupération sécurisée du userId
 // ---------------------------------------------------------
-$userId = $_SESSION['user_id'];
+$userId = $_SESSION['user_id'] ?? 0;
 
 if ($userId <= 0) {
     http_response_code(400);
     echo json_encode(["success" => false, "message" => "userId invalide"]);
-    return;
+    exit;
 }
 
 // ---------------------------------------------------------
@@ -30,7 +30,7 @@ if ($userId <= 0) {
 // ---------------------------------------------------------
 try {
     $stmt = $pdo->prepare("
-        SELECT id, pseudo, email, role, isPaid 
+        SELECT id, pseudo, email, role
         FROM users 
         WHERE id = :id
         LIMIT 1
@@ -41,17 +41,12 @@ try {
     if (!$user) {
         http_response_code(404);
         echo json_encode(["success" => false, "message" => "Utilisateur introuvable"]);
-        return;
+        exit;
     }
 
     // ---------------------------------------------------------
-    // 4) Normalisation des données
+    // 4) Normalisation du rôle
     // ---------------------------------------------------------
-
-    // Normalisation isPaid
-    $user['isPaid'] = ($user['isPaid'] == 1) ? 1 : 0;
-
-    // Normalisation du rôle
     $roleFromDb = $user['role'] ?? 'user';
     $user['role'] = ($roleFromDb === 'admin') ? 'admin' : 'user';
 
@@ -62,11 +57,11 @@ try {
         "success" => true,
         "user" => $user
     ]);
-    return;
+    exit;
 
 } catch (PDOException $e) {
     error_log("Erreur SQL get_user_refresh: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(["success" => false, "message" => "Erreur interne"]);
-    return;
+    exit;
 }

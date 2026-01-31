@@ -138,7 +138,7 @@ if (strlen($password) < 8) {
 // ---------------------------------------------------------
 try {
     $stmt = $pdo->prepare("
-        SELECT id, pseudo, email, password, role, isPaid 
+        SELECT id, pseudo, email, password, role
         FROM users 
         WHERE email = :email 
         LIMIT 1
@@ -205,9 +205,6 @@ try {
 // Nettoyage des données renvoyées
 unset($user['password']);
 
-// Normalisation isPaid en entier 0/1
-$user['isPaid'] = ($user['isPaid'] == 1) ? 1 : 0;
-
 // Normalisation du rôle
 $roleFromDb = $user['role'] ?? 'user';
 if ($roleFromDb === 'admin') {
@@ -221,7 +218,6 @@ if ($roleFromDb === 'admin') {
 // --------------------------------------------------------- 
 $_SESSION['user_id'] = $user['id']; 
 $_SESSION['role'] = $user['role']; 
-$_SESSION['isPaid'] = $user['isPaid'];
 
 // ---------------------------------------------------------
 // 9) Réponse finale

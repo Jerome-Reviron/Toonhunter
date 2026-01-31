@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Coordinates,
   LocationTarget,
@@ -144,10 +144,12 @@ const App: React.FC = () => {
     } else {
       // Sinon → vérifier premium côté backend
       try {
-        const res = await fetch(`/api/check_premium.php?userId=${user.id}`);
+        const res = await fetch(
+          `/api/check_premium.php?parc_id=${selectedParcId}`,
+        );
         const data = await res.json();
 
-        if (!res.ok || !data.success || data.isPaid !== 1) {
+        if (!res.ok || !data.success || data.isPremium !== true) {
           setErrorMessage("Accès premium requis.");
           setAppState(AppState.ERROR);
           return;
@@ -375,12 +377,11 @@ const App: React.FC = () => {
 
     // 2) Refresh user (optionnel)
     try {
-      const res = await fetch(`/api/get_user_refresh.php?userId=${user.id}`);
+      const res = await fetch(`/api/get_user_refresh.php`);
       const data = await res.json();
 
       if (data.success && data.user) {
         const refreshed = data.user;
-        refreshed.isPaid = Number(refreshed.isPaid);
         setUser(refreshed);
         localStorage.setItem("toonhunter_session", JSON.stringify(refreshed));
       }
@@ -439,6 +440,28 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error("Erreur partage:", e);
+    }
+  };
+
+  const handleUnlock = async (location: LocationTarget) => {
+    try {
+      const res = await fetch("/api/create-checkout-session.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parc_id: location.parc_id }),
+      });
+
+      const json = await res.json();
+
+      if (json.success && json.url) {
+        window.location.href = json.url;
+        return;
+      }
+
+      alert(json.message || "Erreur Stripe");
+    } catch (err) {
+      console.error("Erreur Stripe", err);
+      alert("Erreur réseau.");
     }
   };
 
@@ -900,7 +923,8 @@ const App: React.FC = () => {
                   location={loc}
                   userCoords={userLocation}
                   isCollected={!!collection[loc.id]}
-                  hasAccess={user?.isPaid === 1 || loc.free}
+                  hasAccess={loc.hasAccess ?? false}
+                  onUnlock={handleUnlock}
                   onSelect={(t) => {
                     if (collection[t.id]) {
                       setCurrentTab("collection");

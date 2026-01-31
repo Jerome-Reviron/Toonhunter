@@ -2,6 +2,7 @@
 
 require_once __DIR__ . "/cors.php";
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . "/auth.php";
 
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -53,6 +54,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
         $loc['radiusMeters'] = isset($loc['radiusMeters']) ? (int)$loc['radiusMeters'] : 0;
         $loc['free'] = isset($loc['free']) ? (bool)$loc['free'] : false;
+
+        // ---------------------------------------------------------
+        // 🔥 Calcul hasAccess par parc
+        // ---------------------------------------------------------
+        $loc['hasAccess'] = false;
+
+        // Gratuit → accès direct
+        if (!empty($loc['free'])) {
+            $loc['hasAccess'] = true;
+        } else {
+            // Si user connecté → vérifier paiement actif
+            if (isset($_SESSION['user_id'])) {
+                $uid = intval($_SESSION['user_id']);
+                $pid = intval($loc['parc_id']);
+
+                try {
+                    $stmt2 = $pdo->prepare("
+                        SELECT id FROM user_parc_payments
+                        WHERE user_id = :uid
+                        AND parc_id = :pid
+                        AND expires_at > NOW()
+                        LIMIT 1
+                    ");
+                    $stmt2->execute([
+                        ':uid' => $uid,
+                        ':pid' => $pid
+                    ]);
+
+                    if ($stmt2->fetch(PDO::FETCH_ASSOC)) {
+                        $loc['hasAccess'] = true;
+                    }
+                } catch (PDOException $e) {
+                    error_log("Erreur SQL hasAccess: " . $e->getMessage());
+                }
+            }
+        }
     }
 
     error_log(">>> [Location] GET terminé, " . count($locations) . " lieux renvoyés");

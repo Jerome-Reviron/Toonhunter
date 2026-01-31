@@ -217,8 +217,8 @@ $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 // ---------------------------------------------------------
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO users (pseudo, email, password, role, isPaid) 
-        VALUES (:pseudo, :email, :password, 'user', 0)
+        INSERT INTO users (pseudo, email, password, role) 
+        VALUES (:pseudo, :email, :password, 'user')
     ");
 
     $stmt->execute([

@@ -18,7 +18,6 @@ export const authService = {
         pseudo: isAdmin ? "Jerome" : email.split("@")[0],
         email: email,
         role: isAdmin ? "admin" : "user",
-        isPaid: isAdmin ? 1 : 0,
         createdAt: new Date().toISOString(),
       };
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));
@@ -30,12 +29,13 @@ export const authService = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
+
         const data = await response.json();
         if (!data.success) {
           throw new Error(data.message || "Email ou mot de passe incorrect.");
         }
+
         const user = data.user;
-        user.isPaid = Number(user.isPaid);
         localStorage.setItem(SESSION_KEY, JSON.stringify(user));
         return user;
       } catch (error: any) {
@@ -57,9 +57,7 @@ export const authService = {
     }
 
     const user = data.user;
-    user.isPaid = Number(user.isPaid); // normalisation obligatoire
-
-    localStorage.setItem("toonhunter_session", JSON.stringify(user));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
     return user;
   },
 
@@ -90,9 +88,6 @@ export const authService = {
     if (!data.success) {
       throw new Error(data.message || "Impossible d'envoyer le code.");
     }
-
-    // 🔒 Sécurité B : on ne renvoie jamais le code au frontend
-    return;
   },
 
   verifyResetCode: async (email: string, code: string): Promise<boolean> => {

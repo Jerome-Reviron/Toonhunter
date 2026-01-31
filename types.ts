@@ -10,7 +10,6 @@ export interface User {
   pseudo: string;
   email: string;
   role: "admin" | "user";
-  isPaid: number;
   createdAt: string;
 }
 
@@ -34,6 +33,7 @@ export interface LocationTarget {
   rarity: "Commune" | "Rare" | "Légendaire";
   free: boolean;
   parc_id?: number | null;
+  hasAccess?: boolean;
 }
 export interface Parc {
   id: number;
