@@ -37,8 +37,8 @@ try {
         SELECT c.id, c.userId, c.capturedAt, u.email
         FROM collection c
         JOIN users u ON u.id = c.userId
-        WHERE c.capturedAt < NOW() - INTERVAL 4 DAY
-        AND c.capturedAt > NOW() - INTERVAL 7 DAY
+        WHERE c.capturedAt < NOW() - INTERVAL 12 DAY
+        AND c.capturedAt > NOW() - INTERVAL 15 DAY
         AND c.notified = 0
     ");
     $stmt->execute();
