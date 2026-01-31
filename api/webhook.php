@@ -19,6 +19,8 @@ try {
     exit();
 }
 
+if ($event->type !== 'checkout.session.completed') { http_response_code(200); exit; }
+
 if ($event->type === 'checkout.session.completed') {
     $session = $event->data->object;
 
@@ -28,14 +30,27 @@ if ($event->type === 'checkout.session.completed') {
     $stripeSessionId = $session->id ?? null;
     $stripePaymentIntent = $session->payment_intent ?? null;
 
-    error_log("Webhook Stripe OK : user_id={$userId}, parc_id={$parcId}, session={$stripeSessionId}, intent={$stripePaymentIntent}");
+    // 🔥 Récupération du price_id utilisé
+    $priceId = $session->metadata->price_id ?? null;
+    if (!$priceId) { error_log("❌ Pas de price_id dans metadata"); }
+
+    // 🔥 Récupération des metadata du prix Stripe
+    $price = \Stripe\Price::retrieve($priceId);
+
+    // 🔥 Durée dynamique (fallback = 3 jours)
+    $durationDays = intval($price->metadata->duration_days ?? 3);
+
+    // 🔥 Calcul de l'expiration
+    $expiresAt = date('Y-m-d H:i:s', strtotime("+{$durationDays} days"));
+
+    error_log("Webhook Stripe OK : user_id={$userId}, parc_id={$parcId}, duration={$durationDays}j");
 
     if ($userId > 0 && $parcId > 0) {
         $stmt = $pdo->prepare("
             INSERT INTO user_parc_payments 
                 (user_id, parc_id, stripe_session_id, stripe_payment_intent, expires_at)
             VALUES 
-                (:user_id, :parc_id, :session_id, :payment_intent, DATE_ADD(NOW(), INTERVAL 3 DAY))
+                (:user_id, :parc_id, :session_id, :payment_intent, :expires_at)
             ON DUPLICATE KEY UPDATE
                 stripe_session_id = VALUES(stripe_session_id),
                 stripe_payment_intent = VALUES(stripe_payment_intent),
@@ -46,7 +61,8 @@ if ($event->type === 'checkout.session.completed') {
             ':user_id' => $userId,
             ':parc_id' => $parcId,
             ':session_id' => $stripeSessionId,
-            ':payment_intent' => $stripePaymentIntent
+            ':payment_intent' => $stripePaymentIntent,
+            ':expires_at' => $expiresAt
         ]);
     }
 }

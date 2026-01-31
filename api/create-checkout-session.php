@@ -130,7 +130,8 @@ try {
 
         'metadata' => [
             'user_id' => $_SESSION['user_id'],
-            'parc_id' => $parcId
+            'parc_id' => $parcId,
+            'price_id' => $priceId
         ],
 
     'success_url' => "https://192.168.1.100:5173/?payment=success",
