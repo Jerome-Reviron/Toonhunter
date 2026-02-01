@@ -163,6 +163,25 @@ const App: React.FC = () => {
     }
 
     // 🔥 Si premium confirmé OU lieu gratuit → on peut lancer le workflow
+
+    // ---------------------------------------------------------
+    // 🔒 Vérification session AVANT capture (important)
+    // ---------------------------------------------------------
+    try {
+      const sessionCheck = await fetch("/api/get_user_refresh.php", {
+        credentials: "include",
+      });
+
+      if (sessionCheck.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+    } catch (e) {
+      console.error("Erreur check session:", e);
+      window.location.href = "/login";
+      return;
+    }
+
     setCountdown(10);
     setIsDataReady(false);
     setAppState(AppState.ANALYZING);
@@ -226,33 +245,27 @@ const App: React.FC = () => {
   // ---------------------------------------------------------
   // Chargement utilisateur (sans changer l'état)
   // ---------------------------------------------------------
-  useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
+  const checkSession = async () => {
+    try {
+      const res = await fetch("/api/get_user_refresh.php", {
+        credentials: "include",
+      });
+
+      if (res.status === 200) {
+        const data = await res.json();
+        setUser(data.user);
+        setAppState(AppState.LIST);
+      } else {
+        setAppState(AppState.AUTH);
+      }
+    } catch {
+      setAppState(AppState.AUTH);
     }
-  }, []);
+  };
 
   // ---------------------------------------------------------
   // Chargement des données du parc
   // ---------------------------------------------------------
-  // useEffect(() => {
-  //   if (appState === AppState.LIST && user) {
-  //     const loadData = async () => {
-  //       try {
-  //         const [locs, col] = await Promise.all([
-  //           locationService.getAll(selectedParcId ?? undefined),
-  //           collectionService.getUserCollection(user.id),
-  //         ]);
-  //         setLocations(locs);
-  //         setCollection(col);
-  //       } catch (e) {
-  //         console.error("Load error:", e);
-  //       }
-  //     };
-  //     loadData();
-  //   }
-  // }, [appState]);
   useEffect(() => {
     if (appState === AppState.LIST && user) {
       const loadData = async () => {
@@ -283,6 +296,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!selectedParcId) return;
+    if (!user) return;
 
     locationService.getAll(selectedParcId).then((data) => {
       setLocations(data);
@@ -335,12 +349,11 @@ const App: React.FC = () => {
     if (appState !== AppState.SPLASH) return;
 
     const timer = setTimeout(() => {
-      const currentUser = authService.getCurrentUser();
-      setAppState(currentUser ? AppState.LIST : AppState.AUTH);
+      checkSession(); // 🔥 vérification réelle côté serveur
     }, 3500);
 
     return () => clearTimeout(timer);
-  }, []); // 🔥 dépendances VIDES
+  }, [appState]);
 
   // ---------------------------------------------------------
   // Déconnexion
@@ -377,7 +390,15 @@ const App: React.FC = () => {
 
     // 2) Refresh user (optionnel)
     try {
-      const res = await fetch(`/api/get_user_refresh.php`);
+      const res = await fetch(`/api/get_user_refresh.php`, {
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+
       const data = await res.json();
 
       if (data.success && data.user) {
@@ -819,7 +840,16 @@ const App: React.FC = () => {
                   // Vérification en BDD AVANT d’ouvrir le panel admin
                   const res = await fetch(
                     `/api/get_user_refresh.php?userId=${user.id}`,
+                    {
+                      credentials: "include",
+                    },
                   );
+
+                  if (res.status === 401) {
+                    window.location.href = "/login";
+                    return;
+                  }
+
                   const data = await res.json();
 
                   if (!data.success || data.user.role !== "admin") {

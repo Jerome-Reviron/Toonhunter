@@ -16,7 +16,11 @@ export const locationService = {
         ? `/api/locations.php?parc_id=${parcId}`
         : `/api/locations.php`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: "include" });
+      if (response.status === 401) {
+        window.location.href = "/login";
+        return [];
+      }
       if (!response.ok) throw new Error("Erreur chargement lieux");
 
       const data = await response.json();
@@ -42,9 +46,15 @@ export const locationService = {
 
     const response = await fetch("/api/locations.php", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(location),
     });
+
+    if (response.status === 401) {
+      window.location.href = "/login";
+      return Promise.reject("SESSION_EXPIRED");
+    }
 
     const data = await response.json();
 
@@ -63,9 +73,15 @@ export const locationService = {
 
     const response = await fetch("/api/locations.php", {
       method: "PUT",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(location),
     });
+
+    if (response.status === 401) {
+      window.location.href = "/login";
+      return Promise.reject("SESSION_EXPIRED");
+    }
 
     const data = await response.json();
 
@@ -82,9 +98,15 @@ export const locationService = {
   delete: async (id: number, userId: number) => {
     const response = await fetch("/api/locations.php", {
       method: "DELETE",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, userId }),
     });
+
+    if (response.status === 401) {
+      window.location.href = "/login";
+      return false;
+    }
 
     const data = await response.json();
 

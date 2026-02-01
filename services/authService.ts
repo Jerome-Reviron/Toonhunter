@@ -47,7 +47,15 @@ export const authService = {
   },
 
   refreshUser: async (userId: number): Promise<User> => {
-    const response = await fetch(`/api/get_user_refresh.php?userId=${userId}`);
+    const response = await fetch(`/api/get_user_refresh.php?userId=${userId}`, {
+      credentials: "include",
+    });
+
+    if (response.status === 401) {
+      window.location.href = "/login";
+      return Promise.reject("SESSION_EXPIRED");
+    }
+
     const data = await response.json();
 
     if (!data.success) {

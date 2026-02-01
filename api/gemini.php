@@ -377,17 +377,6 @@ try {
 // 9) Réponse frontend
 // ---------------------------------------------------------
 
-// 🔥 LOG FINAL POUR DEBUG
-// error_log(">>> [Gemini] JSON FINAL : " . json_encode([
-//     "success" => true,
-//     "item" => [
-//         "locationId" => $locationId,
-//         "photoUrl"   => $finalImage,
-//         "quote"      => $quote,
-//         "capturedAt" => date("Y-m-d H:i:s")
-//     ]
-// ]));
-
 echo json_encode([
     "success" => true,
     "item" => [
@@ -397,5 +386,3 @@ echo json_encode([
         "capturedAt" => date("Y-m-d H:i:s")
     ]
 ]);
-
-// error_log(">>> [Gemini] FIN DU SCRIPT");

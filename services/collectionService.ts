@@ -13,9 +13,16 @@ export const collectionService = {
     }
 
     try {
-      const response = await fetch(`/api/collection.php?userId=${userId}`);
-      const data = await response.json();
+      const response = await fetch(`/api/collection.php?userId=${userId}`, {
+        credentials: "include",
+      });
 
+      if (response.status === 401) {
+        window.location.href = "/login";
+        return {};
+      }
+
+      const data = await response.json();
       return data.collection || {};
     } catch (e) {
       console.error("Erreur collection API:", e);
@@ -46,10 +53,6 @@ export const collectionService = {
 
       return item;
     }
-
-    // 👉 PLUS AUCUN APPEL BACKEND ICI
-    // Gemini a déjà inséré en BDD.
-    // On renvoie simplement l’item pour que handleCapture fonctionne.
 
     try {
       const item: CollectionItem = {
