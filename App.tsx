@@ -16,6 +16,7 @@ import { collectionService } from "./services/collectionService";
 import { generateCharacterPhoto } from "./services/geminiService";
 import SplashScreen from "./components/SplashScreen/SplashScreen";
 import ParcSelector from "./components/ParcSelector";
+import InstallPwaPrompt from "./components/InstallPwaPrompt";
 import {
   Map,
   Trophy,
@@ -789,406 +790,413 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0518] text-white overflow-x-hidden font-nunito">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-20 -left-20 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-20 -right-20 w-96 h-96 bg-pink-600/10 rounded-full blur-[120px]"></div>
-      </div>
+    <>
+      {/* 🔥 Bouton d’installation PWA */}
+      <InstallPwaPrompt />
+      <div className="min-h-screen bg-[#0f0518] text-white overflow-x-hidden font-nunito">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-20 -left-20 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-20 -right-20 w-96 h-96 bg-pink-600/10 rounded-full blur-[120px]"></div>
+        </div>
 
-      <input
-        id="native-capture"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleNativeCapture}
-      />
+        <input
+          id="native-capture"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleNativeCapture}
+        />
 
-      <header className="sticky top-0 z-30 bg-[#0f0518]/80 backdrop-blur-xl border-b border-white/10 p-4">
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
-          <h1 className="text-2xl font-display font-black tracking-tight text-white">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">
-              TOON
-            </span>
-            HUNTER
-          </h1>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentTab("map")}
-              className={`p-2.5 rounded-xl transition-all ${
-                currentTab === "map"
-                  ? "bg-white/10 text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.3)]"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              <Map className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setCurrentTab("collection")}
-              className={`p-2.5 rounded-xl transition-all ${
-                currentTab === "collection"
-                  ? "bg-white/10 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              <Trophy className="w-5 h-5" />
-            </button>
-
-            {user?.role === "admin" && (
+        <header className="sticky top-0 z-30 bg-[#0f0518]/80 backdrop-blur-xl border-b border-white/10 p-4">
+          <div className="flex items-center justify-between max-w-2xl mx-auto">
+            <h1 className="text-2xl font-display font-black tracking-tight text-white">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">
+                TOON
+              </span>
+              HUNTER
+            </h1>
+            <div className="flex gap-2">
               <button
-                onClick={async () => {
-                  // Vérification en BDD AVANT d’ouvrir le panel admin
-                  const res = await fetch(
-                    `/api/get_user_refresh.php?userId=${user.id}`,
-                    {
-                      credentials: "include",
-                    },
-                  );
-
-                  if (res.status === 401) {
-                    window.location.href = "/login";
-                    return;
-                  }
-
-                  const data = await res.json();
-
-                  if (!data.success || data.user.role !== "admin") {
-                    // ❌ Pas admin en BDD → page intermédiaire
-                    setAdminAccessDenied(true);
-                    return;
-                  }
-
-                  // ✔ Admin réel → accès autorisé
-                  setCurrentTab("admin");
-                }}
+                onClick={() => setCurrentTab("map")}
                 className={`p-2.5 rounded-xl transition-all ${
-                  currentTab === "admin"
-                    ? "bg-white/10 text-red-400 shadow-[0_0_15px_rgba(248,113,113,0.3)]"
+                  currentTab === "map"
+                    ? "bg-white/10 text-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.3)]"
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
-                <Lock className="w-5 h-5" />
+                <Map className="w-5 h-5" />
               </button>
-            )}
+              <button
+                onClick={() => setCurrentTab("collection")}
+                className={`p-2.5 rounded-xl transition-all ${
+                  currentTab === "collection"
+                    ? "bg-white/10 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <Trophy className="w-5 h-5" />
+              </button>
 
-            <button
-              onClick={handleLogout}
-              className="p-2.5 text-gray-500 hover:text-white transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto p-6 pb-24 relative z-10">
-        {currentTab === "map" && (
-          <div className="space-y-8">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-3xl font-display font-black text-white">
-                Exploration
-              </h2>
-              <p className="text-gray-400 text-sm">
-                Découvrez les Toons cachés autour de vous...
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                localStorage.removeItem("selected_parc_id");
-                window.location.reload();
-              }}
-              className="w-full py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"
-            >
-              <RefreshCcw className="w-4 h-4" /> Où changer de parc.
-            </button>
-
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 flex flex-wrap gap-4 items-center justify-between backdrop-blur-md shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
-                  <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400">
-                    <Navigation2 className="w-5 h-5" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">
-                    Signal GPS
-                  </p>
-                  <p className="text-sm font-bold text-white">
-                    Position Active
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-6 items-center">
-                <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">
-                    Rayon Scan
-                  </p>
-                  <div className="flex items-center gap-1.5 justify-end">
-                    <CircleDot className="w-3.5 h-3.5 text-blue-400" />
-                    <span className="text-sm font-bold text-white">50m</span>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-pink-500 mb-0.5">
-                    Toons proches
-                  </p>
-                  <div className="flex items-center gap-1.5 justify-end">
-                    <Radar className="w-3.5 h-3.5 text-pink-500" />
-                    <span className="text-sm font-bold text-white">
-                      {locations.length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredLocations.map((loc) => (
-                <LocationCard
-                  key={loc.id}
-                  location={loc}
-                  userCoords={userLocation}
-                  isCollected={!!collection[loc.id]}
-                  hasAccess={loc.hasAccess ?? false}
-                  onUnlock={handleUnlock}
-                  onSelect={(t) => {
-                    if (collection[t.id]) {
-                      setCurrentTab("collection");
-                      return;
-                    }
-
-                    // 👉 Détection mobile
-                    const isMobile = /Android|iPhone|iPad|iPod/i.test(
-                      navigator.userAgent,
+              {user?.role === "admin" && (
+                <button
+                  onClick={async () => {
+                    // Vérification en BDD AVANT d’ouvrir le panel admin
+                    const res = await fetch(
+                      `/api/get_user_refresh.php?userId=${user.id}`,
+                      {
+                        credentials: "include",
+                      },
                     );
 
-                    if (!isMobile) {
-                      setErrorMessage(
-                        "La capture n’est possible que depuis un appareil mobile.",
-                      );
-                      setAppState(AppState.ERROR);
+                    if (res.status === 401) {
+                      window.location.href = "/login";
                       return;
                     }
 
-                    // 👉 Flux mobile normal
-                    setSelectedTarget(t);
-                    document.getElementById("native-capture")?.click();
+                    const data = await res.json();
+
+                    if (!data.success || data.user.role !== "admin") {
+                      // ❌ Pas admin en BDD → page intermédiaire
+                      setAdminAccessDenied(true);
+                      return;
+                    }
+
+                    // ✔ Admin réel → accès autorisé
+                    setCurrentTab("admin");
                   }}
-                />
-              ))}
+                  className={`p-2.5 rounded-xl transition-all ${
+                    currentTab === "admin"
+                      ? "bg-white/10 text-red-400 shadow-[0_0_15px_rgba(248,113,113,0.3)]"
+                      : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  <Lock className="w-5 h-5" />
+                </button>
+              )}
+
+              <button
+                onClick={handleLogout}
+                className="p-2.5 text-gray-500 hover:text-white transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
-        )}
+        </header>
 
-        {currentTab === "collection" && (
-          <div className="space-y-6">
-            <h2 className="text-3xl font-display font-black text-white">
-              Trophées
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredLocations.map((loc) => {
-                const item = collection[loc.id];
-                const isFound = !!item;
-                const rarityColor =
-                  loc.rarity === "Légendaire"
-                    ? "text-amber-400"
-                    : loc.rarity === "Rare"
-                      ? "text-purple-400"
-                      : "text-blue-400";
+        <main className="max-w-2xl mx-auto p-6 pb-24 relative z-10">
+          {currentTab === "map" && (
+            <div className="space-y-8">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-3xl font-display font-black text-white">
+                  Exploration
+                </h2>
+                <p className="text-gray-400 text-sm">
+                  Découvrez les Toons cachés autour de vous...
+                </p>
+              </div>
 
-                return (
-                  <div
-                    key={loc.id}
-                    className={`relative overflow-hidden rounded-3xl border-2 transition-all duration-300 ${
-                      isFound
-                        ? "border-emerald-500/50 bg-gray-900 shadow-xl"
-                        : "border-white/5 bg-white/5 grayscale opacity-50 hover:opacity-80"
-                    }`}
-                  >
-                    <div className="h-48 w-full relative">
-                      <img
-                        src={
-                          isFound
-                            ? `data:image/jpeg;base64,${item.photoUrl}`
-                            : loc.imageUrl
-                        }
-                        alt={loc.name}
-                        className="h-full w-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
-                      {!isFound && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-100 pointer-events-none">
-                          <CircleHelp className="w-10 h-10 text-purple-300 mb-2 drop-shadow-[0_0_14px_rgba(220,150,255,0.9)] animate-pulse" />
-                          <span className="text-[12px] font-black uppercase tracking-widest text-purple-200 drop-shadow-[0_0_10px_rgba(220,150,255,0.8)] animate-pulse">
-                            À découvrir
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-black font-display text-white">
-                          {loc.characterName}
-                        </h3>
-                        <span
-                          className={`text-[10px] font-black uppercase tracking-widest ${rarityColor}`}
-                        >
-                          {loc.rarity}
-                        </span>
-                      </div>
-                      {isFound ? (
-                        <div className="space-y-3">
-                          <p className="text-sm italic text-emerald-400 leading-tight">
-                            "{item.quote}"
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                setShowViewer({
-                                  isOpen: true,
-                                  item,
-                                  target: loc,
-                                })
-                              }
-                              className="flex-1 py-2 bg-white/10 text-white text-[10px] font-black uppercase rounded-xl border border-white/10 hover:bg-white/20 transition-colors"
-                            >
-                              Détails
-                            </button>
-                            <button
-                              onClick={() =>
-                                downloadImage(item.photoUrl, loc.characterName)
-                              }
-                              className="p-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400">
-                          Destination : {loc.name}
-                        </p>
-                      )}
+              <button
+                onClick={() => {
+                  localStorage.removeItem("selected_parc_id");
+                  window.location.reload();
+                }}
+                className="w-full py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"
+              >
+                <RefreshCcw className="w-4 h-4" /> Où changer de parc.
+              </button>
+
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-5 flex flex-wrap gap-4 items-center justify-between backdrop-blur-md shadow-xl">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
+                    <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400">
+                      <Navigation2 className="w-5 h-5" />
                     </div>
                   </div>
-                );
-              })}
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">
+                      Signal GPS
+                    </p>
+                    <p className="text-sm font-bold text-white">
+                      Position Active
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-6 items-center">
+                  <div className="text-right">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">
+                      Rayon Scan
+                    </p>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <CircleDot className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-sm font-bold text-white">50m</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-pink-500 mb-0.5">
+                      Toons proches
+                    </p>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <Radar className="w-3.5 h-3.5 text-pink-500" />
+                      <span className="text-sm font-bold text-white">
+                        {locations.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredLocations.map((loc) => (
+                  <LocationCard
+                    key={loc.id}
+                    location={loc}
+                    userCoords={userLocation}
+                    isCollected={!!collection[loc.id]}
+                    hasAccess={loc.hasAccess ?? false}
+                    onUnlock={handleUnlock}
+                    onSelect={(t) => {
+                      if (collection[t.id]) {
+                        setCurrentTab("collection");
+                        return;
+                      }
+
+                      // 👉 Détection mobile
+                      const isMobile = /Android|iPhone|iPad|iPod/i.test(
+                        navigator.userAgent,
+                      );
+
+                      if (!isMobile) {
+                        setErrorMessage(
+                          "La capture n’est possible que depuis un appareil mobile.",
+                        );
+                        setAppState(AppState.ERROR);
+                        return;
+                      }
+
+                      // 👉 Flux mobile normal
+                      setSelectedTarget(t);
+                      document.getElementById("native-capture")?.click();
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {currentTab === "admin" && user?.role === "admin" && (
-          <AdminPanel
-            selectedParcId={selectedParcId}
-            userLocation={userLocation}
-            locations={allLocations}
-            onAddLocation={async (l) => {
-              const created = await locationService.create(l);
+          {currentTab === "collection" && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-display font-black text-white">
+                Trophées
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredLocations.map((loc) => {
+                  const item = collection[loc.id];
+                  const isFound = !!item;
+                  const rarityColor =
+                    loc.rarity === "Légendaire"
+                      ? "text-amber-400"
+                      : loc.rarity === "Rare"
+                        ? "text-purple-400"
+                        : "text-blue-400";
 
-              // 🔁 maj liste globale admin
-              setAllLocations((prev) => [...prev, created]);
-
-              // 🔁 si le point appartient au parc sélectionné → on l’ajoute aussi à locations (map/collection)
-              if (created.parc_id === selectedParcId) {
-                setLocations((prev) => [...prev, created]);
-              }
-            }}
-            onUpdateLocation={async (l) => {
-              await locationService.update(l);
-
-              // 🔁 maj liste globale admin
-              setAllLocations((prev) =>
-                prev.map((loc) => (loc.id === l.id ? { ...loc, ...l } : loc)),
-              );
-
-              // 🔁 maj liste filtrée (map/collection)
-              setLocations((prev) => {
-                // si la location mise à jour appartient au parc sélectionné
-                if (l.parc_id === selectedParcId) {
-                  return prev.map((loc) =>
-                    loc.id === l.id ? { ...loc, ...l } : loc,
+                  return (
+                    <div
+                      key={loc.id}
+                      className={`relative overflow-hidden rounded-3xl border-2 transition-all duration-300 ${
+                        isFound
+                          ? "border-emerald-500/50 bg-gray-900 shadow-xl"
+                          : "border-white/5 bg-white/5 grayscale opacity-50 hover:opacity-80"
+                      }`}
+                    >
+                      <div className="h-48 w-full relative">
+                        <img
+                          src={
+                            isFound
+                              ? `data:image/jpeg;base64,${item.photoUrl}`
+                              : loc.imageUrl
+                          }
+                          alt={loc.name}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+                        {!isFound && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-100 pointer-events-none">
+                            <CircleHelp className="w-10 h-10 text-purple-300 mb-2 drop-shadow-[0_0_14px_rgba(220,150,255,0.9)] animate-pulse" />
+                            <span className="text-[12px] font-black uppercase tracking-widest text-purple-200 drop-shadow-[0_0_10px_rgba(220,150,255,0.8)] animate-pulse">
+                              À découvrir
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-black font-display text-white">
+                            {loc.characterName}
+                          </h3>
+                          <span
+                            className={`text-[10px] font-black uppercase tracking-widest ${rarityColor}`}
+                          >
+                            {loc.rarity}
+                          </span>
+                        </div>
+                        {isFound ? (
+                          <div className="space-y-3">
+                            <p className="text-sm italic text-emerald-400 leading-tight">
+                              "{item.quote}"
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() =>
+                                  setShowViewer({
+                                    isOpen: true,
+                                    item,
+                                    target: loc,
+                                  })
+                                }
+                                className="flex-1 py-2 bg-white/10 text-white text-[10px] font-black uppercase rounded-xl border border-white/10 hover:bg-white/20 transition-colors"
+                              >
+                                Détails
+                              </button>
+                              <button
+                                onClick={() =>
+                                  downloadImage(
+                                    item.photoUrl,
+                                    loc.characterName,
+                                  )
+                                }
+                                className="p-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-400">
+                            Destination : {loc.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   );
+                })}
+              </div>
+            </div>
+          )}
+
+          {currentTab === "admin" && user?.role === "admin" && (
+            <AdminPanel
+              selectedParcId={selectedParcId}
+              userLocation={userLocation}
+              locations={allLocations}
+              onAddLocation={async (l) => {
+                const created = await locationService.create(l);
+
+                // 🔁 maj liste globale admin
+                setAllLocations((prev) => [...prev, created]);
+
+                // 🔁 si le point appartient au parc sélectionné → on l’ajoute aussi à locations (map/collection)
+                if (created.parc_id === selectedParcId) {
+                  setLocations((prev) => [...prev, created]);
                 }
-                // sinon, on la retire de la liste filtrée
-                return prev.filter((loc) => loc.id !== l.id);
-              });
-            }}
-            onDeleteLocation={async (id) => {
-              await locationService.delete(Number(id), Number(user.id));
+              }}
+              onUpdateLocation={async (l) => {
+                await locationService.update(l);
 
-              // 🔁 maj liste globale admin
-              setAllLocations((prev) => prev.filter((x) => x.id !== id));
+                // 🔁 maj liste globale admin
+                setAllLocations((prev) =>
+                  prev.map((loc) => (loc.id === l.id ? { ...loc, ...l } : loc)),
+                );
 
-              // 🔁 maj liste filtrée (map/collection)
-              setLocations((prev) => prev.filter((x) => x.id !== id));
-            }}
-            onClose={() => setCurrentTab("map")}
-            userId={user.id}
-          />
-        )}
-      </main>
+                // 🔁 maj liste filtrée (map/collection)
+                setLocations((prev) => {
+                  // si la location mise à jour appartient au parc sélectionné
+                  if (l.parc_id === selectedParcId) {
+                    return prev.map((loc) =>
+                      loc.id === l.id ? { ...loc, ...l } : loc,
+                    );
+                  }
+                  // sinon, on la retire de la liste filtrée
+                  return prev.filter((loc) => loc.id !== l.id);
+                });
+              }}
+              onDeleteLocation={async (id) => {
+                await locationService.delete(Number(id), Number(user.id));
 
-      {showViewer.isOpen && showViewer.item && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col overflow-y-auto">
-          <div className="p-6 flex justify-between items-center bg-black/50 border-b border-white/10">
-            <h3 className="font-display font-black text-xl text-white">
-              {showViewer.target?.characterName}
-            </h3>
-            <button
-              onClick={() => setShowViewer({ isOpen: false })}
-              className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
-            >
-              <X />
-            </button>
-          </div>
-          <div className="flex-1 flex flex-col items-center p-6 gap-6">
-            <img
-              src={`data:image/jpeg;base64,${showViewer.item.photoUrl}`}
-              className="max-w-full max-h-[70vh] rounded-3xl shadow-2xl border border-white/20 object-contain"
-              alt="Full"
+                // 🔁 maj liste globale admin
+                setAllLocations((prev) => prev.filter((x) => x.id !== id));
+
+                // 🔁 maj liste filtrée (map/collection)
+                setLocations((prev) => prev.filter((x) => x.id !== id));
+              }}
+              onClose={() => setCurrentTab("map")}
+              userId={user.id}
             />
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl max-w-md w-full text-center shadow-2xl">
-              <p className="text-pink-400 text-[10px] font-black uppercase tracking-widest mb-2">
-                Réplique magique
-              </p>
-              <p className="text-lg font-display italic text-white leading-tight">
-                "{showViewer.item.quote}"
-              </p>
+          )}
+        </main>
+
+        {showViewer.isOpen && showViewer.item && (
+          <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col overflow-y-auto">
+            <div className="p-6 flex justify-between items-center bg-black/50 border-b border-white/10">
+              <h3 className="font-display font-black text-xl text-white">
+                {showViewer.target?.characterName}
+              </h3>
+              <button
+                onClick={() => setShowViewer({ isOpen: false })}
+                className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
+              >
+                <X />
+              </button>
+            </div>
+            <div className="flex-1 flex flex-col items-center p-6 gap-6">
+              <img
+                src={`data:image/jpeg;base64,${showViewer.item.photoUrl}`}
+                className="max-w-full max-h-[70vh] rounded-3xl shadow-2xl border border-white/20 object-contain"
+                alt="Full"
+              />
+              <div className="bg-white/5 border border-white/10 p-6 rounded-3xl max-w-md w-full text-center shadow-2xl">
+                <p className="text-pink-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                  Réplique magique
+                </p>
+                <p className="text-lg font-display italic text-white leading-tight">
+                  "{showViewer.item.quote}"
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() =>
+                  downloadImage(
+                    showViewer.item!.photoUrl,
+                    showViewer.target?.characterName || "Toon",
+                  )
+                }
+                className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all hover:bg-white/20 flex items-center justify-center gap-2"
+              >
+                <Download className="w-5 h-5 shrink-0" />
+                <span className="text-[15px] leading-none font-black tracking-wide">
+                  Télécharger
+                </span>
+              </button>
+
+              <button
+                onClick={handleShare}
+                className="w-full px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <Send className="w-5 h-5 shrink-0" />
+                <span className="text-[15px] leading-none font-black tracking-wide">
+                  Partager
+                </span>
+              </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() =>
-                downloadImage(
-                  showViewer.item!.photoUrl,
-                  showViewer.target?.characterName || "Toon",
-                )
-              }
-              className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all hover:bg-white/20 flex items-center justify-center gap-2"
-            >
-              <Download className="w-5 h-5 shrink-0" />
-              <span className="text-[15px] leading-none font-black tracking-wide">
-                Télécharger
-              </span>
-            </button>
-
-            <button
-              onClick={handleShare}
-              className="w-full px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl uppercase text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <Send className="w-5 h-5 shrink-0" />
-              <span className="text-[15px] leading-none font-black tracking-wide">
-                Partager
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 };
 
