@@ -99,7 +99,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         throw new Error("Les mots de passe ne correspondent pas.");
       if (!validatePassword(password))
         throw new Error(
-          "Le mot de passe doit contenir 8 caractères, 1 majuscule, 1 chiffre et 1 caractère spécial."
+          "Le mot de passe doit contenir 8 caractères, 1 majuscule, 1 chiffre et 1 caractère spécial.",
         );
 
       await authService.register(pseudo, email, password);
@@ -123,8 +123,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     try {
       if (forgotStep === "EMAIL") {
         if (!validateEmail(email)) throw new Error("Email invalide.");
-        const codeSent = await authService.requestPasswordReset(email);
-        alert(`[SIMULATION EMAIL]\nCode: ${codeSent}`);
+        await authService.requestPasswordReset(email);
         setForgotStep("CODE");
         setTimeLeft(60);
       } else if (forgotStep === "CODE") {

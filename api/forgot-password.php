@@ -192,33 +192,23 @@ if (!$emailExists) {
 }
 
 // ---------------------------------------------------------
-// 9) Mode local : pas d'email réel, on renvoie le code en debug
-// ---------------------------------------------------------
-if ($_SERVER['SERVER_NAME'] === 'localhost') {
-    echo json_encode([
-        "success" => true,
-        "message" => "Code généré (mode local)."
-    ]);
-    exit;
-}
-
-// ---------------------------------------------------------
-// 10) Mode production : envoi réel via PHPMailer (Hostinger)
+// 9) Mode production : envoi réel via PHPMailer (Hostinger)
 // ---------------------------------------------------------
 $mail = new PHPMailer(true);
 
 try {
+    error_log("SMTP DEBUG: host=".$_ENV['SMTP_HOST']." user=".$_ENV['SMTP_USER']." pass=".$_ENV['SMTP_PASS']." port=".$_ENV['SMTP_PORT']." secure=".$_ENV['SMTP_SECURE']);
     $mail->isSMTP();
     $mail->Host       = $_ENV['SMTP_HOST'];
     $mail->SMTPAuth   = true;
     $mail->Username   = $_ENV['SMTP_USER'];
     $mail->Password   = $_ENV['SMTP_PASS'];
     $mail->Port = (int)$_ENV['SMTP_PORT'];
-    $mail->SMTPSecure = $_ENV['SMTP_SECURE'] === 'ssl' 
+    $mail->SMTPSecure = ($_ENV['SMTP_SECURE'] === 'ssl')
         ? PHPMailer::ENCRYPTION_SMTPS 
         : PHPMailer::ENCRYPTION_STARTTLS;
 
-    $mail->setFrom('noreply@tondomaine.com', 'ToonHunter');
+    $mail->setFrom($_ENV['SMTP_USER'], 'ToonHunter');
     $mail->addAddress($email);
 
     $mail->isHTML(true);

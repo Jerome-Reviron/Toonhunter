@@ -112,8 +112,8 @@ elseif (strtotime($reset['expires_at']) < time()) {
     $valid = false;
 }
 
-// Code incorrect
-elseif ($reset['token'] !== $code) {
+// Code incorrect (token hashé en BCRYPT)
+elseif (!password_verify($code, $reset['token'])) {
     $valid = false;
 }
 
