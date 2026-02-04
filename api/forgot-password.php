@@ -198,6 +198,8 @@ $mail = new PHPMailer(true);
 
 try {
     error_log("SMTP DEBUG: host=".$_ENV['SMTP_HOST']." user=".$_ENV['SMTP_USER']." pass=".$_ENV['SMTP_PASS']." port=".$_ENV['SMTP_PORT']." secure=".$_ENV['SMTP_SECURE']);
+    $mail->CharSet = 'UTF-8'; 
+    $mail->Encoding = 'base64';
     $mail->isSMTP();
     $mail->Host       = $_ENV['SMTP_HOST'];
     $mail->SMTPAuth   = true;

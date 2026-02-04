@@ -51,6 +51,8 @@ try {
         $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
         try {
+            $mail->CharSet = 'UTF-8';
+            $mail->Encoding = 'base64';
             $mail->isSMTP();
             $mail->Host = $_ENV['SMTP_HOST'];
             $mail->SMTPAuth = true;
@@ -68,8 +70,8 @@ try {
                 <p>Bonjour,</p>
                 <p>Une ou plusieurs photos de votre collection ToonHunter seront automatiquement supprimées dans <strong>3 jours</strong>.</p>
                 <p>Si vous souhaitez les conserver, connectez-vous à votre compte et téléchargez les!</p>
-                <p>N'hésitez pas à les partager sur les réseaux sociaux en mentionnant <strong>@ToonHunterApp</strong> pour nous aider à faire connaître le service.</p>
-                <p>Voici le lien pour vous connecter à votre compte : <a href='https://toonhunter.fr/login.php'>Se connecter</a></p>
+                <p>N'hésitez pas à les partager sur les réseaux sociaux en mentionnant <strong>#ToonHunter.fr</strong> pour nous aider à faire connaître le service.</p>
+                <p>Voici le lien pour vous connecter à votre compte : <a href='https://toonhunter.fr'>Se connecter</a></p>
                 <p>À bientôt,<br>L'équipe ToonHunter</p>
             ";
 
@@ -98,7 +100,7 @@ try {
 try {
     $delete = $pdo->prepare("
         DELETE FROM collection
-        WHERE capturedAt < NOW() - INTERVAL 7 DAY
+        WHERE capturedAt < NOW() - INTERVAL 15 DAY
     ");
     $delete->execute();
 
