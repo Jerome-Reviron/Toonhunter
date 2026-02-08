@@ -50,6 +50,10 @@ export enum AppState {
   RESULT = "RESULT",
   ERROR = "ERROR",
   PAYMENT = "PAYMENT",
+  CGV = "CGV", 
+  RGPD = "RGPD", 
+  MENTIONS = "MENTIONS", 
+  CONTACT = "CONTACT",
 }
 
 export interface AnalysisResult {

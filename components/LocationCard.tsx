@@ -19,7 +19,7 @@ interface LocationCardProps {
   hasAccess: boolean;
 }
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 const calculateDistance = (
   lat1: number,

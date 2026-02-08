@@ -386,7 +386,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 placeholder="Ex: Parc des Étoiles"
                 value={parcName}
                 onChange={(e) => setParcName(e.target.value)}
-                className="w-full bg-black/40 border border-white/20 rounded-lg p-3 focus:border-pink-500 focus:outline-none transition-colors"
+                className="w-full bg-black/40 border border-white/20 rounded-lg p-3 focus:border-blue-500 focus:outline-none transition-colors"
               />
             </div>
 
