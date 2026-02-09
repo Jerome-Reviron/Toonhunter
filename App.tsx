@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [locations, setLocations] = useState<LocationTarget[]>([]);
   const [allLocations, setAllLocations] = useState<LocationTarget[]>([]);
+  const [sortedLocations, setSortedLocations] = useState<LocationTarget[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<LocationTarget | null>(
     null,
   );
@@ -116,6 +117,24 @@ const App: React.FC = () => {
       img.src = base64;
     });
   }
+
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ) => {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   const handleNativeCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -304,6 +323,81 @@ const App: React.FC = () => {
     (loc) => loc.parc_id === selectedParcId,
   );
 
+  const SCAN_RADIUS = 50; // rayon global du radar
+
+  const nearbyCount = filteredLocations.filter((loc) => {
+    if (!userLocation) return false;
+
+    const dist = calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      loc.coordinates.latitude,
+      loc.coordinates.longitude,
+    );
+
+    return dist <= SCAN_RADIUS;
+  }).length;
+
+  // ---------------------------------------------------------
+  // Tri automatique par distance + polling léger (30s)
+  // ---------------------------------------------------------
+  useEffect(() => {
+    if (!filteredLocations.length) {
+      setSortedLocations([]);
+      return;
+    }
+
+    // Si pas encore de GPS → on garde l'ordre d'origine
+    if (!userLocation) {
+      setSortedLocations(filteredLocations);
+      return;
+    }
+
+    const sortByDistance = () => {
+      // 1. Tri par distance
+      const sorted = [...filteredLocations].sort((a, b) => {
+        const distA = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          a.coordinates.latitude,
+          a.coordinates.longitude,
+        );
+
+        const distB = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          b.coordinates.latitude,
+          b.coordinates.longitude,
+        );
+
+        return distA - distB;
+      });
+
+      // 2. Séparation gratuit / payant
+      const freeLocations = sorted.filter((loc) => loc.free === true);
+      const paidLocations = sorted.filter((loc) => loc.free !== true);
+
+      // 3. Si l’utilisateur n’a PAS accès premium → on met les gratuits d’abord
+      //    Sinon → on renvoie tout trié normalement
+      const finalList = paidLocations.every((loc) => loc.hasAccess === true)
+        ? sorted // premium actif → tout trié normalement
+        : [...freeLocations, ...paidLocations]; // premium non actif → gratuits puis payants
+
+      setSortedLocations(finalList);
+    };
+
+    // Tri immédiat
+    sortByDistance();
+
+    // Polling léger toutes les 30 secondes
+    const interval = setInterval(sortByDistance, 30000);
+
+    return () => clearInterval(interval);
+  }, [filteredLocations, userLocation]);
+
+  // ---------------------------------------------------------
+  // Rechargement des locations quand on change de parc
+  // ---------------------------------------------------------
   useEffect(() => {
     if (!selectedParcId) return;
     if (!user) return;
@@ -1841,7 +1935,7 @@ const App: React.FC = () => {
                     <div className="flex items-center gap-1.5 justify-end">
                       <Radar className="w-3.5 h-3.5 text-pink-500" />
                       <span className="text-sm font-bold text-white">
-                        {locations.length}
+                        {nearbyCount}
                       </span>
                     </div>
                   </div>
@@ -1849,7 +1943,7 @@ const App: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredLocations.map((loc) => (
+                {sortedLocations.map((loc) => (
                   <LocationCard
                     key={loc.id}
                     location={loc}
