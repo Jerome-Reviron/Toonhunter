@@ -342,42 +342,58 @@ const App: React.FC = () => {
   // Tri automatique par distance + polling léger (30s)
   // ---------------------------------------------------------
   useEffect(() => {
-    // Si pas de GPS ou pas de locations → on garde tel quel
-    if (!userLocation || filteredLocations.length === 0) {
+    if (!filteredLocations.length) {
+      setSortedLocations([]);
+      return;
+    }
+
+    // Si pas encore de GPS → on garde l'ordre d'origine
+    if (!userLocation) {
       setSortedLocations(filteredLocations);
       return;
     }
 
-    // 1) On calcule les distances une seule fois
-    const sorted = [...filteredLocations]
-      .map((loc) => ({
-        ...loc,
-        _dist: calculateDistance(
+    const sortByDistance = () => {
+      // 1. Tri par distance
+      const sorted = [...filteredLocations].sort((a, b) => {
+        const distA = calculateDistance(
           userLocation.latitude,
           userLocation.longitude,
-          loc.coordinates.latitude,
-          loc.coordinates.longitude,
-        ),
-      }))
-      .sort((a, b) => a._dist - b._dist);
+          a.coordinates.latitude,
+          a.coordinates.longitude,
+        );
 
-    // 2) Séparation gratuit / payant
-    const freeLocations = sorted.filter((loc) => loc.free === true);
-    const paidLocations = sorted.filter((loc) => loc.free !== true);
+        const distB = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          b.coordinates.latitude,
+          b.coordinates.longitude,
+        );
 
-    // 3) Ordre final selon accès premium
-    const finalList = paidLocations.every((loc) => loc.hasAccess === true)
-      ? sorted
-      : [...freeLocations, ...paidLocations];
+        return distA - distB;
+      });
 
-    // 4) 🔥 IMPORTANT : on compare avant de setState pour éviter les boucles infinies
-    setSortedLocations((prev) => {
-      if (JSON.stringify(prev) === JSON.stringify(finalList)) {
-        return prev; // rien n’a changé → pas de rerender
-      }
-      return finalList;
-    });
-  }, [userLocation, filteredLocations]);
+      // 2. Séparation gratuit / payant
+      const freeLocations = sorted.filter((loc) => loc.free === true);
+      const paidLocations = sorted.filter((loc) => loc.free !== true);
+
+      // 3. Si l’utilisateur n’a PAS accès premium → on met les gratuits d’abord
+      //    Sinon → on renvoie tout trié normalement
+      const finalList = paidLocations.every((loc) => loc.hasAccess === true)
+        ? sorted // premium actif → tout trié normalement
+        : [...freeLocations, ...paidLocations]; // premium non actif → gratuits puis payants
+
+      setSortedLocations(finalList);
+    };
+
+    // Tri immédiat
+    sortByDistance();
+
+    // Polling léger toutes les 30 secondes
+    const interval = setInterval(sortByDistance, 30000);
+
+    return () => clearInterval(interval);
+  }, [filteredLocations, userLocation]);
 
   // ---------------------------------------------------------
   // Rechargement des locations quand on change de parc
