@@ -67,14 +67,24 @@ export const LocationCard: React.FC<LocationCardProps> = ({
     ? true
     : distanceInMeters !== null && distanceInMeters <= location.radiusMeters;
 
-  const distanceDisplay =
-    distanceInMeters !== null
-      ? distanceInMeters < 5
-        ? "Sur place"
-        : distanceInMeters < 1000
-          ? `${distanceInMeters.toFixed(1)}m`
-          : `${(distanceInMeters / 1000).toFixed(2)}km`
-      : "Localisation...";
+  const isOnSpot = distanceInMeters !== null && distanceInMeters < 5;
+
+  const isInRadius =
+    distanceInMeters !== null && distanceInMeters <= location.radiusMeters;
+
+  const canCapture = hasAccess && (isOnSpot || isInRadius);
+
+  let distanceDisplay = "Localisation...";
+
+  if (distanceInMeters !== null) {
+    if (isOnSpot) {
+      distanceDisplay = "Sur place";
+    } else if (distanceInMeters < 1000) {
+      distanceDisplay = `${distanceInMeters.toFixed(1)} m`;
+    } else {
+      distanceDisplay = `${(distanceInMeters / 1000).toFixed(2)} km`;
+    }
+  }
 
   const borderColor =
     location.rarity === "Légendaire"
@@ -188,25 +198,28 @@ export const LocationCard: React.FC<LocationCardProps> = ({
             {/* BOUTON CAPTURE / VERROUILLÉ */}
             {!isCollected ? (
               <button
-                onClick={() => hasAccess && onSelect(location)}
+                onClick={() => canCapture && onSelect(location)}
+                disabled={!canCapture}
                 className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wide transition-all shadow-lg flex items-center gap-2 ${
                   !hasAccess
                     ? "bg-gray-800 text-gray-500 border border-white/5 cursor-not-allowed"
-                    : isNearby
-                      ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white active:scale-95"
-                      : "bg-gray-800 text-gray-400 cursor-default"
+                    : !isInRadius
+                      ? "bg-gray-800 text-gray-400 cursor-not-allowed"
+                      : isOnSpot
+                        ? "bg-emerald-500 text-black active:scale-95"
+                        : "bg-gradient-to-r from-pink-500 to-purple-600 text-white active:scale-95"
                 }`}
               >
                 {!hasAccess ? (
                   <>
                     <Lock className="w-3 h-3" /> Verrouillé
                   </>
-                ) : isNearby ? (
+                ) : !isInRadius ? (
+                  "Trop loin"
+                ) : (
                   <>
                     <Target className="w-3 h-3" /> Capturer
                   </>
-                ) : (
-                  "Trop loin"
                 )}
               </button>
             ) : (
