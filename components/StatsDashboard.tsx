@@ -254,7 +254,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ onBack }) => {
                 key={index}
                 className="flex justify-between py-1 border-b border-white/10"
               >
-                <span>Location #{loc.location_id}</span>
+                <span>{loc.label ?? `Location #${loc.location_id}`}</span>
                 <span className="font-bold">{loc.total}</span>
               </div>
             ))}

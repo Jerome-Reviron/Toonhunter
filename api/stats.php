@@ -33,47 +33,78 @@ switch ($period) {
         $periodFilter = "1";
 }
 
-// Filtre parc
-$parcFilter = "";
+// Construction du WHERE principal
+$where = "WHERE $periodFilter";
 $params = [];
 
-if ($parcId !== "all") {
-    $parcFilter = " AND parc_id = :parc_id";
+// GLOBAL
+if ($parcId === "all") {
+    $where .= " AND parc_id IS NULL AND location_id IS NULL";
+}
+// PAR PARC
+else {
+    $where .= " AND parc_id = :parc_id AND location_id IS NULL";
     $params[":parc_id"] = intval($parcId);
 }
 
-// 1) Agrégation des stats
+// 1) Récupération de LA bonne ligne (pas d’agrégation)
 $sql = "
     SELECT 
-        SUM(total_captures) AS totalCaptures,
-        SUM(unique_captures) AS uniqueCaptures,
-        SUM(premium_captures) AS premiumCaptures,
-        SUM(free_captures) AS freeCaptures,
-        SUM(active_users) AS activeUsers,
-        SUM(new_users) AS newUsers,
-        MAX(total_users) AS totalUsers, 
-        AVG(avg_captures_per_user) AS avgCapturesPerUser,
-        AVG(avg_free_per_user) AS avgFreePerUser,
-        AVG(avg_premium_per_user) AS avgPremiumPerUser,
-        AVG(conversion_rate) AS conversionRate,
-        SUM(revenue_cents) AS revenueCents,
-        SUM(paying_users) AS payingUsers
+        total_captures AS totalCaptures,
+        unique_captures AS uniqueCaptures,
+        premium_captures AS premiumCaptures,
+        free_captures AS freeCaptures,
+        active_users AS activeUsers,
+        new_users AS newUsers,
+        total_users AS totalUsers,
+        avg_captures_per_user AS avgCapturesPerUser,
+        avg_free_per_user AS avgFreePerUser,
+        avg_premium_per_user AS avgPremiumPerUser,
+        conversion_rate AS conversionRate,
+        revenue_cents AS revenueCents,
+        paying_users AS payingUsers
     FROM stats_daily
-    WHERE $periodFilter $parcFilter
+    $where
+    LIMIT 1
 ";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// 2) Top 5 locations (déjà agrégées dans stats_daily)
+// Si aucune ligne trouvée → valeurs par défaut
+if (!$stats) {
+    $stats = [
+        "totalCaptures" => 0,
+        "uniqueCaptures" => 0,
+        "premiumCaptures" => 0,
+        "freeCaptures" => 0,
+        "activeUsers" => 0,
+        "newUsers" => 0,
+        "totalUsers" => 0,
+        "avgCapturesPerUser" => 0,
+        "avgFreePerUser" => 0,
+        "avgPremiumPerUser" => 0,
+        "conversionRate" => 0,
+        "revenueCents" => 0,
+        "payingUsers" => 0
+    ];
+}
+
+// 2) Top 5 locations (avec noms + parc)
 $sql = "
     SELECT 
-        location_id,
-        SUM(total_captures) AS total
-    FROM stats_daily
-    WHERE $periodFilter $parcFilter AND location_id IS NOT NULL
-    GROUP BY location_id
+        l.id AS location_id,
+        l.name AS location_name,
+        p.name AS parc_name,
+        SUM(sd.total_captures) AS total
+    FROM stats_daily sd
+    LEFT JOIN locations l ON sd.location_id = l.id
+    LEFT JOIN parcs p ON l.parc_id = p.id
+    WHERE $periodFilter
+    " . ($parcId === "all" ? "" : " AND sd.parc_id = :parc_id ") . "
+    AND sd.location_id IS NOT NULL
+    GROUP BY sd.location_id
     ORDER BY total DESC
     LIMIT 5
 ";
@@ -82,7 +113,18 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $topLocations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// On intègre topLocations DANS stats
+// Formatage du label selon le filtre
+foreach ($topLocations as &$loc) {
+    if ($parcId === "all") {
+        // Global → afficher "Location (Parc)"
+        $loc["label"] = $loc["location_name"] . " (" . $loc["parc_name"] . ")";
+    } else {
+        // Par parc → afficher seulement la location
+        $loc["label"] = $loc["location_name"];
+    }
+}
+
+// Ajout au résultat
 $stats["topLocations"] = $topLocations;
 
 // Réponse JSON
