@@ -38,6 +38,9 @@ if ($event->type === 'checkout.session.completed') {
     $stripeSessionId = $session->id ?? null;
     $stripePaymentIntent = $session->payment_intent ?? null;
 
+    // Montant total payé (en centimes)
+    $amountCents = intval($session->amount_total ?? 0);
+
     // Récupération du price_id
     $priceId = $session->metadata->price_id ?? null;
     if (!$priceId) { error_log("❌ Pas de price_id dans metadata"); }
@@ -51,20 +54,21 @@ if ($event->type === 'checkout.session.completed') {
     // Calcul expiration
     $expiresAt = date('Y-m-d H:i:s', strtotime("+{$durationDays} days"));
 
-    error_log("Webhook Stripe OK : user_id={$userId}, parc_id={$parcId}, duration={$durationDays}j");
+    error_log("Webhook Stripe OK : user_id={$userId}, parc_id={$parcId}, duration={$durationDays}j, amount={$amountCents}");
 
     if ($userId > 0 && $parcId > 0) {
 
-        // INSERT / UPDATE
+        // INSERT / UPDATE avec amount_cents
         $stmt = $pdo->prepare("
             INSERT INTO user_parc_payments 
-                (user_id, parc_id, stripe_session_id, stripe_payment_intent, expires_at)
+                (user_id, parc_id, stripe_session_id, stripe_payment_intent, expires_at, amount_cents)
             VALUES 
-                (:user_id, :parc_id, :session_id, :payment_intent, :expires_at)
+                (:user_id, :parc_id, :session_id, :payment_intent, :expires_at, :amount)
             ON DUPLICATE KEY UPDATE
                 stripe_session_id = VALUES(stripe_session_id),
                 stripe_payment_intent = VALUES(stripe_payment_intent),
-                expires_at = VALUES(expires_at)
+                expires_at = VALUES(expires_at),
+                amount_cents = VALUES(amount_cents)
         ");
 
         $stmt->execute([
@@ -72,7 +76,8 @@ if ($event->type === 'checkout.session.completed') {
             ':parc_id' => $parcId,
             ':session_id' => $stripeSessionId,
             ':payment_intent' => $stripePaymentIntent,
-            ':expires_at' => $expiresAt
+            ':expires_at' => $expiresAt,
+            ':amount' => $amountCents
         ]);
 
         // ---------------------------------------------------------

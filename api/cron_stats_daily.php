@@ -46,9 +46,9 @@ function computeStats($pdo, $day, $parcId = null, $locationId = null) {
         JOIN locations ON locations.id = collection.locationId
         WHERE $filters
     ";
-    $total = $pdo->prepare($sql);
-    $total->execute($params);
-    $totalCaptures = $total->fetchColumn();
+    $totalCaptures = $pdo->prepare($sql);
+    $totalCaptures->execute($params);
+    $totalCaptures = $totalCaptures->fetchColumn();
 
     // Unique captures
     $sql = "
@@ -57,9 +57,9 @@ function computeStats($pdo, $day, $parcId = null, $locationId = null) {
         JOIN locations ON locations.id = collection.locationId
         WHERE $filters
     ";
-    $unique = $pdo->prepare($sql);
-    $unique->execute($params);
-    $uniqueCaptures = $unique->fetchColumn();
+    $uniqueCaptures = $pdo->prepare($sql);
+    $uniqueCaptures->execute($params);
+    $uniqueCaptures = $uniqueCaptures->fetchColumn();
 
     // Premium
     $sql = "
@@ -68,9 +68,9 @@ function computeStats($pdo, $day, $parcId = null, $locationId = null) {
         JOIN locations ON locations.id = collection.locationId
         WHERE locations.free = 0 AND $filters
     ";
-    $premium = $pdo->prepare($sql);
-    $premium->execute($params);
-    $premiumCaptures = $premium->fetchColumn();
+    $premiumCaptures = $pdo->prepare($sql);
+    $premiumCaptures->execute($params);
+    $premiumCaptures = $premiumCaptures->fetchColumn();
 
     // Free
     $sql = "
@@ -79,9 +79,9 @@ function computeStats($pdo, $day, $parcId = null, $locationId = null) {
         JOIN locations ON locations.id = collection.locationId
         WHERE locations.free = 1 AND $filters
     ";
-    $free = $pdo->prepare($sql);
-    $free->execute($params);
-    $freeCaptures = $free->fetchColumn();
+    $freeCaptures = $pdo->prepare($sql);
+    $freeCaptures->execute($params);
+    $freeCaptures = $freeCaptures->fetchColumn();
 
     // Active users
     $sql = "
@@ -90,9 +90,9 @@ function computeStats($pdo, $day, $parcId = null, $locationId = null) {
         JOIN locations ON locations.id = collection.locationId
         WHERE $filters
     ";
-    $active = $pdo->prepare($sql);
-    $active->execute($params);
-    $activeUsers = $active->fetchColumn();
+    $activeUsers = $pdo->prepare($sql);
+    $activeUsers->execute($params);
+    $activeUsers = $activeUsers->fetchColumn();
 
     // New users
     $sql = "
@@ -104,9 +104,8 @@ function computeStats($pdo, $day, $parcId = null, $locationId = null) {
     $newUsers->execute([":day" => $day]);
     $newUsers = $newUsers->fetchColumn();
 
-    // Total users (global)
-    $sql = "SELECT COUNT(*) FROM users";
-    $totalUsers = $pdo->query($sql)->fetchColumn();
+    // Total users
+    $totalUsers = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 
     // Moyennes
     $avgCapturesPerUser = $activeUsers > 0 ? $totalCaptures / $activeUsers : 0;
@@ -136,9 +135,42 @@ function computeStats($pdo, $day, $parcId = null, $locationId = null) {
 
     $conversionRate = ($freeUsers > 0) ? ($payUsers / $freeUsers) : 0;
 
-    // Stripe (à brancher plus tard)
-    $revenueCents = 0;
-    $payingUsers = $payUsers;
+    // ---------------------------------------------------------
+    // 🔥 Stripe : CA + utilisateurs payants
+    // ---------------------------------------------------------
+
+    if ($locationId !== null) {
+        $revenueCents = 0;
+        $payingUsers = 0;
+    } else {
+        $stripeParams = [":day" => $day];
+        $stripeFilter = "DATE(paid_at) = :day";
+
+        if ($parcId !== null) {
+            $stripeFilter .= " AND parc_id = :parc_id";
+            $stripeParams[":parc_id"] = $parcId;
+        }
+
+        // CA du jour
+        $sql = "
+            SELECT COALESCE(SUM(amount_cents), 0)
+            FROM user_parc_payments
+            WHERE $stripeFilter
+        ";
+        $revenueCents = $pdo->prepare($sql);
+        $revenueCents->execute($stripeParams);
+        $revenueCents = $revenueCents->fetchColumn();
+
+        // Utilisateurs payants du jour
+        $sql = "
+            SELECT COUNT(DISTINCT user_id)
+            FROM user_parc_payments
+            WHERE $stripeFilter
+        ";
+        $payingUsers = $pdo->prepare($sql);
+        $payingUsers->execute($stripeParams);
+        $payingUsers = $payingUsers->fetchColumn();
+    }
 
     return [
         "total" => $totalCaptures,

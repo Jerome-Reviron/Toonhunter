@@ -226,7 +226,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ onBack }) => {
           {/* CA */}
           <StatCard
             label="Chiffre d'affaires (€)"
-            value={(stats?.revenueCents / 100).toFixed(2)}
+            value={
+              stats?.revenueCents != null
+                ? (stats.revenueCents / 100).toFixed(2)
+                : "0.00"
+            }
             loading={loading}
           />
 
