@@ -18,16 +18,16 @@ $period = $_GET["period"] ?? "day";
 // Filtre période basé sur stats_daily.date
 switch ($period) {
     case "day":
-        $periodFilter = "date = CURDATE()";
+        $periodFilter = "date = CURDATE() - INTERVAL 1 DAY";
         break;
     case "week":
-        $periodFilter = "YEARWEEK(date, 1) = YEARWEEK(CURDATE(), 1)";
+        $periodFilter = "date BETWEEN CURDATE() - INTERVAL 7 DAY AND CURDATE() - INTERVAL 1 DAY";
         break;
     case "month":
-        $periodFilter = "YEAR(date) = YEAR(CURDATE()) AND MONTH(date) = MONTH(CURDATE())";
+        $periodFilter = "date BETWEEN CURDATE() - INTERVAL 31 DAY AND CURDATE() - INTERVAL 1 DAY";
         break;
     case "year":
-        $periodFilter = "YEAR(date) = YEAR(CURDATE())";
+        $periodFilter = "date BETWEEN CURDATE() - INTERVAL 365 DAY AND CURDATE() - INTERVAL 1 DAY";
         break;
     default:
         $periodFilter = "1";
